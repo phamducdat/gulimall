@@ -9,7 +9,7 @@ import java.util.List;
 @FeignClient("gulimall-cart")
 public interface CartFeignService {
 
-    // 获取当前用户选中的所有购物项
+    // Get all the shopping items selected by the current user
     @GetMapping("/currentUserCartItems")
     List<OrderItemVo> getCurrentUserCartItems();
 }

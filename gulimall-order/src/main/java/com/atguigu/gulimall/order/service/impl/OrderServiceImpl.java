@@ -225,72 +225,71 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
     }
 
     /**
-     * 提交订单 (下单)
+     * Submit order (place order)
      * <p>
-     * 高并发场景下 (e.g. 生成订单)，不适合使用 Seata 解决分布式事务
-     * 高并发场景下，我们应该使用 "柔性事务 - 可靠消息 + 最终一致性方案 (异步确保型)" 方案 解决分布式事务
+     * Under the high concurrency scene (E.G. Generation order), it is not suitable for using Seata to solve distributed transactions
+     * In the high concurrency scene, we should use "flexible transaction -reliable message + final consistency scheme (asynchronous guarantee type)" solution to solve distributed transactions
      */
-    // @GlobalTransactional
     @Transactional
     @Override
     public SubmitOrderResponseVo submitOrder(OrderSubmitVo orderSubmitVo) {
-        // 将 orderSubmitVo 存入 ThreadLocal 中
+        // Store orderSubmitVo in ThreadLocal
         submitVoThreadLocal.set(orderSubmitVo);
 
         SubmitOrderResponseVo response = new SubmitOrderResponseVo();
-        // 初始化 code = 0
+        // Initialize code = 0
         response.setCode(0);
-        // 从 ThreadLocal 中获取 memberResponseVO (memberResponseVO 中封装了 用户登录信息)
+        // Get memberResponseVO from ThreadLocal (memberResponseVO encapsulates user login information)
         MemberResponseVO memberResponseVO = LoginUserInterceptor.loginUser.get();
 
         /*
-         * 验证 防重令牌 (防止 重复提交订单，解决 接口幂等性 问题)
+         * Verify the idempotency token (to prevent duplicate order submissions and ensure interface idempotency)
          *
-         * 验证过程:
-         *   第一步 : 根据 用户id 从Redis中获取 防重令牌
-         *   第二步 : 比较 从Redis中获取的防重令牌 和 客户端传过来的防重令牌
-         *           如果二者相同 => 删除Redis中的防重令牌，并返回1
-         *           如果二者不同 => 直接返回0
+         * Verification process:
+         *   Step 1: Retrieve the idempotency token from Redis using the user ID
+         *   Step 2: Compare the idempotency token retrieved from Redis with the token provided by the client
+         *           If they are the same => Delete the idempotency token from Redis and return 1
+         *           If they are different => Directly return 0
          *
-         * NOTICE : 整个验证过程必须保证原子性
+         * NOTICE: The entire verification process must ensure atomicity
          *
-         * 使用 Lua 脚本，可以实现 整个验证过程 是原子性的
+         * Using a Lua script, you can achieve atomicity for the entire verification process
          *   String script = "if redis.call('get',KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
          */
 
-        // 验证 防重令牌
-        // 使用 Lua 脚本，可以实现 整个验证过程 是原子性的
+        // Verify the idempotency token
+        // Using a Lua script, you can achieve atomicity for the entire verification process
         String script = "if redis.call('get',KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
-        // 获取 客户端传过来的防重令牌
+        // Retrieve the idempotency token provided by the client
         String orderToken = orderSubmitVo.getOrderToken();
-        // 原子性 验证令牌 & 删除令牌
-        //   第一个参数 : Lua 脚本
-        //   第二个参数 : Lua 脚本 中的 KEYS 指代的参数值
-        //   第三个参数 : Lua 脚本 中的 ARGV 指代的参数值
+        // Atomically verify and delete the token
+        //   First parameter: Lua script
+        //   Second parameter: Values for KEYS in the Lua script
+        //   Third parameter: Values for ARGV in the Lua script
         Long execute = redisTemplate.execute(new DefaultRedisScript<Long>(script, Long.class), Arrays.asList(OrderConstant.USER_ORDER_TOKEN_PREFIX + memberResponseVO.getId()), orderToken);
         if (execute == 0L) {
-            // 防重令牌验证失败
+            // Idempotency token verification failed
             response.setCode(1);
             return response;
         } else {
-            // 防重令牌验证成功
+            // Idempotency token verification succeeded
 
-            // 1.创建订单
+            // 1. Create the order
             OrderCreateTo order = createOrder();
 
-            // 2.验价
-            // 准确的价格 : 计算所得的订单价格 (应付总额 = 订单总额 + 运费)
+            // 2. Verify the price
+            // Accurate price: Calculated order price (total payable amount = order total amount + shipping fee)
             BigDecimal payAmount = order.getOrder().getPayAmount();
-            // 从客户端传过来的价格
+            // Price provided by the client
             BigDecimal payPrice = orderSubmitVo.getPayPrice();
             if (Math.abs(payAmount.subtract(payPrice).doubleValue()) < 0.01) {
-                // 验价成功
+                // Price verification succeeded
 
-                // 3.保存 订单 & 订单项
+                // 3. Save the order and order items
                 saveOrder(order);
 
-                // 4.锁定库存 (所有订单项都锁定成功才算锁定成功，只要有一个订单项锁定失败那就是锁定失败)
-                // 锁定商品库存VO
+                // 4. Lock inventory (all order items must be successfully locked, if any item fails to lock, the whole process fails)
+                // Inventory lock VO
                 WareSkuLockVo wareSkuLockVo = new WareSkuLockVo();
                 wareSkuLockVo.setOrderSn(order.getOrder().getOrderSn());
                 List<OrderItemVo> locks = order.getItems().stream().map(item -> {
@@ -302,47 +301,48 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
                 }).collect(Collectors.toList());
                 wareSkuLockVo.setLocks(locks);
 
-                // 调用远程微服务 锁定库存 (所有订单项都锁定成功才算锁定成功，只要有一个订单项锁定失败那就是锁定失败)
+                // Call remote microservice to lock inventory (all order items must be successfully locked, if any item fails to lock, the whole process fails)
                 R r = wareFeignService.orderLockStock(wareSkuLockVo);
 
                 if (r.getCode() == 0) {
-                    // 库存锁定 成功
+                    // Inventory lock succeeded
                     response.setOrder(order.getOrder());
 
-                    // 模拟业务出现异常
+                    // Simulate a business exception
                     // int num = 10 / 0;
 
-                    // 发送延时消息
-                    // "order-event-exchange"交换机 会将消息派送到 "order.delay.queue"队列
-                    // "order.delay.queue"队列 为一个 延时队列，也叫 死信队列 ("order.delay.queue"队列 没有消费者)
-                    // 1分钟后，延时队列 会将消息转发到 "order.release.order.queue"队列
-                    // "order.release.order.queue" 的消费者在获取消息之后，会判断订单状态是否为 "待付款"，如果是，就取消订单
+                    // Send a delayed message
+                    // The "order-event-exchange" exchange will route the message to the "order.delay.queue" queue
+                    // The "order.delay.queue" queue is a delayed queue, also called a dead letter queue (the "order.delay.queue" queue has no consumers)
+                    // After 1 minute, the delayed queue will forward the message to the "order.release.order.queue" queue
+                    // The consumer of the "order.release.order.queue" will check if the order status is "pending payment", if it is, it will cancel the order
                     rabbitTemplate.convertAndSend("order-event-exchange", "order.create.order", order.getOrder());
 
                     return response;
                 } else {
-                    // 库存锁定 失败
+                    // Inventory lock failed
                     String msg = (String) r.get("msg");
                     throw new NoStockException(msg);
                 }
             } else {
-                // 验价失败
+                // Price verification failed
                 response.setCode(2);
                 return response;
             }
         }
     }
 
-    // 创建订单
+
+    // Create Order
     private OrderCreateTo createOrder() {
         OrderCreateTo orderCreateTo = new OrderCreateTo();
-        // 生成订单号
+        // Generate order number
         String orderSn = IdWorker.getTimeId();
-        // 构建订单信息
+        // Build order information
         OrderEntity orderEntity = buildOrder(orderSn);
-        // 构建所有订单项信息
+        // Build all order items information
         List<OrderItemEntity> itemEntities = buildOrderItems(orderSn);
-        // 计算订单价格 (应付总额 = 订单总额 + 运费)
+        // Calculate order price (total payable amount = order total amount + shipping fee)
         computePrice(orderEntity, itemEntities);
 
         orderCreateTo.setOrder(orderEntity);
@@ -351,27 +351,27 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
         return orderCreateTo;
     }
 
-    // 构建订单信息
+    // Build order information
     private OrderEntity buildOrder(String orderSn) {
-        // 从 ThreadLocal 中获取 memberResponseVO (memberResponseVO 中封装了 用户登录信息)
+        // Get memberResponseVO from ThreadLocal (memberResponseVO encapsulates user login information)
         MemberResponseVO memberResponseVO = LoginUserInterceptor.loginUser.get();
 
         OrderEntity orderEntity = new OrderEntity();
         orderEntity.setOrderSn(orderSn);
         orderEntity.setMemberId(memberResponseVO.getId());
 
-        // 从 ThreadLocal 中获取 orderSubmitVo
+        // Get orderSubmitVo from ThreadLocal
         OrderSubmitVo orderSubmitVo = submitVoThreadLocal.get();
-        // 根据 收货地址 计算 运费
+        // Calculate shipping fee based on the delivery address
         R fareR = wareFeignService.getFare(orderSubmitVo.getAddrId());
         if (fareR.getCode() == 0) {
-            // 远程调用成功
-            // 从 fareR 中获取 fareResp
+            // Remote call successful
+            // Get fareResp from fareR
             FareVo fareResp = fareR.getData(new TypeReference<FareVo>() {
             });
-            // 设置 运费信息
+            // Set shipping fee information
             orderEntity.setFreightAmount(fareResp.getFare());
-            // 设置 收货人信息
+            // Set recipient information
             orderEntity.setReceiverCity(fareResp.getAddress().getCity());
             orderEntity.setReceiverDetailAddress(fareResp.getAddress().getDetailAddress());
             orderEntity.setReceiverName(fareResp.getAddress().getName());
@@ -380,22 +380,23 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
             orderEntity.setReceiverProvince(fareResp.getAddress().getProvince());
             orderEntity.setReceiverRegion(fareResp.getAddress().getRegion());
         }
-        // 设置 订单状态信息
+        // Set order status information
         orderEntity.setStatus(OrderStatusEnum.CREATE_NEW.getCode());
-        // 设置 自动确认收货时间
+        // Set auto-confirmation time to 7 days
         orderEntity.setAutoConfirmDay(7);
-        // 设置 删除状态为 未删除
+        // Set delete status to not deleted
         orderEntity.setDeleteStatus(0);
         return orderEntity;
     }
 
-    // 构建所有订单项信息
+
+    // Build information for all order items
     private List<OrderItemEntity> buildOrderItems(String orderSn) {
-        // 获取当前用户选中的所有购物项
+        // Get all shopping items selected by the current user
         List<OrderItemVo> currentUserCartItems = cartFeignService.getCurrentUserCartItems();
         if (currentUserCartItems != null && currentUserCartItems.size() > 0) {
             List<OrderItemEntity> itemEntities = currentUserCartItems.stream().map(cartItem -> {
-                // 构建当前订单项信息 (构建每一个订单项信息)
+                // Build information for the current order item (build information for each order item)
                 OrderItemEntity orderItemEntity = buildOrderItem(cartItem);
                 orderItemEntity.setOrderSn(orderSn);
                 return orderItemEntity;
@@ -404,6 +405,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
         }
         return null;
     }
+
 
     // 构建每一个订单项信息
     private OrderItemEntity buildOrderItem(OrderItemVo cartItem) {
@@ -456,9 +458,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
         return itemEntity;
     }
 
-    // 计算订单价格 (应付总额 = 订单总额 + 运费)
+    // Calculate order price (total payable amount = order total amount + shipping fee)
     private void computePrice(OrderEntity orderEntity, List<OrderItemEntity> itemEntities) {
-        // 订单总额 = 叠加所有订单项金额
+        // Order total amount = sum of amounts of all order items
         BigDecimal total = new BigDecimal("0.0");
         BigDecimal coupon = new BigDecimal("0.0");
         BigDecimal integration = new BigDecimal("0.0");
@@ -466,34 +468,35 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
         BigDecimal gift = new BigDecimal("0.0");
         BigDecimal growth = new BigDecimal("0.0");
         for (OrderItemEntity entity : itemEntities) {
-            // 商品促销分解金额
+            // Promotion discount amount for the item
             promotion = promotion.add(entity.getPromotionAmount());
-            // 优惠券优惠分解金额
+            // Coupon discount amount for the item
             coupon = coupon.add(entity.getCouponAmount());
-            // 积分优惠分解金额
+            // Integration discount amount for the item
             integration = integration.add(entity.getIntegrationAmount());
-            // 该商品经过优惠后的分解金额
+            // The actual amount of the item after discounts
             total = total.add(entity.getRealAmount());
-            // 赠送积分
+            // Gift integration points
             gift = gift.add(new BigDecimal(entity.getGiftIntegration().toString()));
-            // 赠送成长值
+            // Gift growth value
             growth = growth.add(new BigDecimal(entity.getGiftGrowth().toString()));
         }
-        // 订单总额
+        // Set order total amount
         orderEntity.setTotalAmount(total);
-        // 应付总额 = 订单总额 + 运费
+        // Set total payable amount (total payable amount = order total amount + shipping fee)
         orderEntity.setPayAmount(total.add(orderEntity.getFreightAmount()));
-        // 促销抵扣金额
+        // Set promotion discount amount
         orderEntity.setPromotionAmount(promotion);
-        // 优惠券抵扣金额
+        // Set coupon discount amount
         orderEntity.setCouponAmount(coupon);
-        // 积分抵扣金额
+        // Set integration discount amount
         orderEntity.setIntegrationAmount(integration);
-        // 积分
+        // Set integration points
         orderEntity.setIntegration(gift.intValue());
-        // 成长值
+        // Set growth value
         orderEntity.setGrowth(growth.intValue());
     }
+
 
     // 保存 订单 & 订单项
     private void saveOrder(OrderCreateTo order) {

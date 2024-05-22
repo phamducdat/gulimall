@@ -13,15 +13,15 @@ import java.util.List;
 @FeignClient("gulimall-ware")
 public interface WareFeignService {
 
-    // 查询商品是否有货
+    // Query whether the product is available
     @PostMapping("/ware/waresku/hasStock")
     R getSkuHasStock(@RequestBody List<Long> skuIds);
 
-    // 根据 收货地址 计算 运费
+    // Calculate the freight according to the receiving address
     @GetMapping("/ware/wareinfo/fare")
     R getFare(@RequestParam("addrId") Long addrId);
 
-    // 锁定库存 (所有订单项都锁定成功才算锁定成功，只要有一个订单项锁定失败那就是锁定失败)
+    // Lock the inventory (all orders are locked successfully before the lock is successful. As long as there is an order item locking failure, it is locking failure)
     @PostMapping("/ware/waresku/lock/order")
     R orderLockStock(@RequestBody WareSkuLockVo lockVo);
 }

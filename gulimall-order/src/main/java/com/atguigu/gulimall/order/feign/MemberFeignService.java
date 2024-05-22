@@ -10,7 +10,7 @@ import java.util.List;
 @FeignClient("gulimall-member")
 public interface MemberFeignService {
 
-    // 根据 memberId 获取 会员收货地址
+    // Obtain membership address according to Memberid
     @GetMapping("/member/memberreceiveaddress/{memberId}/addresses")
     List<MemberAddressVo> getAddressByMemberId(@PathVariable("memberId") Long memberId);
 }

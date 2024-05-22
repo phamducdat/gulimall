@@ -21,37 +21,37 @@ public class OrderWebController {
     private OrderService orderService;
 
     /**
-     * 提交订单 (下单)
+     * Submit order (place order)
      */
     @PostMapping("/submitOrder")
     public String submitOrder(OrderSubmitVo vo, Model model, RedirectAttributes redirectAttributes) {
         try {
             SubmitOrderResponseVo responseVo = orderService.submitOrder(vo);
             if (responseVo.getCode() == 0) {
-                // 下单成功
+                // successfully ordered
                 model.addAttribute("submitOrderResp", responseVo);
-                // 跳转到支付页面
+                // Jump to the payment page
                 return "pay";
             } else {
-                // 下单失败 -> 返回订单确认页面
-                String msg = "下单失败：";
+                // Failure to place an order-> Return to order confirmation page
+                String msg = "Failure to place an order:";
                 switch (responseVo.getCode()) {
                     case 1:
-                        msg += "订单信息过期，请刷新后再次提交";
+                        msg += "The order information expires, please submit it again after refreshing";
                         break;
                     case 2:
-                        msg += "订单商品价格发生变化，请确认后再次提交";
+                        msg += "The price of the order product changes, please confirm it after submitting again";
                         break;
                     case 3:
-                        msg += "库存锁定失败，商品库存不足";
+                        msg += "The inventory lock fails, the commodity inventory is insufficient";
                         break;
                 }
                 redirectAttributes.addFlashAttribute("msg", msg);
-                // 跳转到订单确认页面
+                // Jump to order confirmation page
                 return "redirect:http://order.gulimall.com/toTrade";
             }
         } catch (Exception e) {
-            // 抛出异常 -> 返回订单确认页面
+            // Throw out the exception-> Return to order confirmation page
             e.printStackTrace();
             if (e instanceof NoStockException) {
                 String message = ((NoStockException) e).getMessage();
