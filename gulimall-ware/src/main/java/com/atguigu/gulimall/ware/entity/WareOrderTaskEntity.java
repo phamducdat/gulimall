@@ -2,14 +2,14 @@ package com.atguigu.gulimall.ware.entity;
 
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
 
 import java.io.Serializable;
 import java.util.Date;
-import lombok.Data;
 
 /**
- * 库存工作单
- * 
+ * Inventory work order
+ *
  * @author zhengyuli
  * @email zli78122@usc.edu
  * @date 2020-06-23 00:25:27
@@ -17,64 +17,77 @@ import lombok.Data;
 @Data
 @TableName("wms_ware_order_task")
 public class WareOrderTaskEntity implements Serializable {
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	/**
-	 * id
-	 */
-	@TableId
-	private Long id;
-	/**
-	 * order_id
-	 */
-	private Long orderId;
-	/**
-	 * order_sn
-	 */
-	private String orderSn;
-	/**
-	 * 收货人
-	 */
-	private String consignee;
-	/**
-	 * 收货人电话
-	 */
-	private String consigneeTel;
-	/**
-	 * 配送地址
-	 */
-	private String deliveryAddress;
-	/**
-	 * 订单备注
-	 */
-	private String orderComment;
-	/**
-	 * 付款方式【 1:在线付款 2:货到付款】
-	 */
-	private Integer paymentWay;
-	/**
-	 * 任务状态
-	 */
-	private Integer taskStatus;
-	/**
-	 * 订单描述
-	 */
-	private String orderBody;
-	/**
-	 * 物流单号
-	 */
-	private String trackingNo;
-	/**
-	 * create_time
-	 */
-	private Date createTime;
-	/**
-	 * 仓库id
-	 */
-	private Long wareId;
-	/**
-	 * 工作单备注
-	 */
-	private String taskComment;
+    /**
+     * ID
+     */
+    @TableId
+    private Long id;
+
+    /**
+     * Order ID
+     */
+    private Long orderId;
+
+    /**
+     * Order SN (Serial Number)
+     */
+    private String orderSn;
+
+    /**
+     * Consignee (Recipient)
+     */
+    private String consignee;
+
+    /**
+     * Consignee's phone number
+     */
+    private String consigneeTel;
+
+    /**
+     * Delivery address
+     */
+    private String deliveryAddress;
+
+    /**
+     * Order comments
+     */
+    private String orderComment;
+
+    /**
+     * Payment method [1: Online payment, 2: Cash on delivery]
+     */
+    private Integer paymentWay;
+
+    /**
+     * Task status
+     */
+    private Integer taskStatus;
+
+    /**
+     * Order description
+     */
+    private String orderBody;
+
+    /**
+     * Tracking number
+     */
+    private String trackingNo;
+
+    /**
+     * Creation time
+     */
+    private Date createTime;
+
+    /**
+     * Warehouse ID
+     */
+    private Long wareId;
+
+    /**
+     * Task comments
+     */
+    private String taskComment;
 
 }
