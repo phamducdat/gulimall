@@ -285,7 +285,7 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
     // Check if SKU has stock
     @Override
     public List<SkuHasStockVo> getSkuHasStock(List<Long> skuIds) {
-        List<SkuHasStockVo> collect = skuIds.stream().map(skuId -> {
+        return skuIds.stream().map(skuId -> {
             SkuHasStockVo vo = new SkuHasStockVo();
             // Query the total stock of the current SKU
             Long count = baseMapper.getSkuStock(skuId);
@@ -293,8 +293,6 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
             vo.setHasStock(count != null && count > 0);
             return vo;
         }).collect(Collectors.toList());
-
-        return collect;
     }
 
 
