@@ -1,27 +1,26 @@
 package com.atguigu.gulimall.ware.controller;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
 import com.atguigu.common.exception.BizCodeEnum;
 import com.atguigu.common.exception.NoStockException;
+import com.atguigu.common.utils.PageUtils;
+import com.atguigu.common.utils.R;
+import com.atguigu.gulimall.ware.entity.WareSkuEntity;
+import com.atguigu.gulimall.ware.service.WareSkuService;
 import com.atguigu.gulimall.ware.vo.SkuHasStockVo;
 import com.atguigu.gulimall.ware.vo.WareSkuLockVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import com.atguigu.gulimall.ware.entity.WareSkuEntity;
-import com.atguigu.gulimall.ware.service.WareSkuService;
-import com.atguigu.common.utils.PageUtils;
-import com.atguigu.common.utils.R;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 /**
- * 商品库存
- *
- * @author zhengyuli
- * @email zli78122@usc.edu
- * @date 2020-06-23 00:25:27
+ * Product Inventory
+ * <p>
+ * Author: zhengyuli
+ * Email: zli78122@usc.edu
+ * Date: 2020-06-23 00:25:27
  */
 @RestController
 @RequestMapping("ware/waresku")
@@ -30,7 +29,7 @@ public class WareSkuController {
     private WareSkuService wareSkuService;
 
     /**
-     * 锁定库存 (所有订单项都锁定成功才算锁定成功，只要有一个订单项锁定失败那就是锁定失败)
+     * Lock stock (only successful if all order items are locked successfully; if any order item fails to lock, the lock is considered a failure)
      */
     @PostMapping("/lock/order")
     public R orderLockStock(@RequestBody WareSkuLockVo lockVo) {
@@ -44,67 +43,61 @@ public class WareSkuController {
     }
 
     /**
-     * 查询sku是否有库存
+     * Check if SKU has stock
      */
     @PostMapping("/hasStock")
     public R getSkuHasStock(@RequestBody List<Long> skuIds) {
         List<SkuHasStockVo> vos = wareSkuService.getSkuHasStock(skuIds);
-
         return R.ok().setData(vos);
     }
 
     /**
-     * 分页条件查询
+     * Paginated conditional query
      */
     @RequestMapping("/list")
     //@RequiresPermissions("ware:waresku:list")
     public R list(@RequestParam Map<String, Object> params) {
         PageUtils page = wareSkuService.queryPage(params);
-
         return R.ok().put("page", page);
     }
 
     /**
-     * 信息
+     * Information
      */
     @RequestMapping("/info/{id}")
     //@RequiresPermissions("ware:waresku:info")
     public R info(@PathVariable("id") Long id) {
         WareSkuEntity wareSku = wareSkuService.getById(id);
-
         return R.ok().put("wareSku", wareSku);
     }
 
     /**
-     * 保存
+     * Save
      */
     @RequestMapping("/save")
     //@RequiresPermissions("ware:waresku:save")
     public R save(@RequestBody WareSkuEntity wareSku) {
         wareSkuService.save(wareSku);
-
         return R.ok();
     }
 
     /**
-     * 修改
+     * Update
      */
     @RequestMapping("/update")
     //@RequiresPermissions("ware:waresku:update")
     public R update(@RequestBody WareSkuEntity wareSku) {
         wareSkuService.updateById(wareSku);
-
         return R.ok();
     }
 
     /**
-     * 删除
+     * Delete
      */
     @RequestMapping("/delete")
     //@RequiresPermissions("ware:waresku:delete")
     public R delete(@RequestBody Long[] ids) {
         wareSkuService.removeByIds(Arrays.asList(ids));
-
         return R.ok();
     }
 }
