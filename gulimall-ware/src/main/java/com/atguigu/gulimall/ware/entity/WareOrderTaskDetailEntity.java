@@ -18,7 +18,7 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 @TableName("wms_ware_order_task_detail")
-//@TableName("product_physical_stock")
+//@TableName("stock_order_task")
 public class WareOrderTaskDetailEntity implements Serializable {
     private static final long serialVersionUID = 1L;
 
