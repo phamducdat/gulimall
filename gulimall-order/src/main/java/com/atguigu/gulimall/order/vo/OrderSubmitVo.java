@@ -9,24 +9,24 @@ import java.math.BigDecimal;
  */
 @Data
 public class OrderSubmitVo {
-    // 收货地址id
+    // Shipping address ID
     private Long addrId;
 
-    // 支付方式
+    // Payment method
     private Integer payType;
 
-    // 防重令牌
+    // Anti-duplicate token
     private String orderToken;
 
-    // 应付总额 (需要验价)
+    // Total amount payable (needs to be verified)
     private BigDecimal payPrice;
 
-    // 订单备注信息
+    // Order remarks
     private String note;
 
-    // 优惠信息
+    // Discount information
     // ...
 
-    // 发票信息
+    // Invoice information
     // ...
 }
