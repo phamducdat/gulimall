@@ -2,55 +2,60 @@ package com.atguigu.gulimall.ware.entity;
 
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-
-import java.io.Serializable;
-import java.util.Date;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
+
 /**
- * 库存工作单
- * 
+ * Inventory Work Order Detail
+ *
  * @author zhengyuli
- * @email zli78122@usc.edu
  * @date 2020-06-23 00:25:27
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @TableName("wms_ware_order_task_detail")
+//@TableName("product_physical_stock")
 public class WareOrderTaskDetailEntity implements Serializable {
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	/**
-	 * id
-	 */
-	@TableId
-	private Long id;
-	/**
-	 * sku_id
-	 */
-	private Long skuId;
-	/**
-	 * sku_name
-	 */
-	private String skuName;
-	/**
-	 * 购买个数
-	 */
-	private Integer skuNum;
-	/**
-	 * 工作单id
-	 */
-	private Long taskId;
-	/**
-	 * 仓库id
-	 */
-	private Long wareId;
-	/**
-	 * 锁定状态 (1-锁定 2-解锁 3-扣减)
-	 */
-	private Integer lockStatus;
+    /**
+     * ID
+     */
+    @TableId
+    private Long id;
+
+    /**
+     * SKU ID
+     */
+    private Long skuId;
+
+    /**
+     * SKU Name
+     */
+    private String skuName;
+
+    /**
+     * Quantity purchased
+     */
+    private Integer skuNum;
+
+    /**
+     * Work order ID
+     */
+    private Long taskId;
+
+    /**
+     * Warehouse ID
+     */
+    private Long wareId;
+
+    /**
+     * Lock status (1 - Locked, 2 - Unlocked, 3 - Deducted)
+     */
+    private Integer lockStatus;
 }
+
