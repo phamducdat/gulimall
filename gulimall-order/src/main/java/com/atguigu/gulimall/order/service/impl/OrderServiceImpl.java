@@ -406,13 +406,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
     }
 
 
-    // 构建每一个订单项信息
+    // Build each order item information
     private OrderItemEntity buildOrderItem(OrderItemVo cartItem) {
         OrderItemEntity itemEntity = new OrderItemEntity();
 
-        // 1.商品spu信息
+        // 1. Product spu information
         Long skuId = cartItem.getSkuId();
-        // 根据 skuId 查询 spu信息
+        // Query spu information based on skuId
         R spuInfoR = productFeignService.getSpuInfoBySkuId(skuId);
         SpuInfoVo spuInfoVo = spuInfoR.getData(new TypeReference<SpuInfoVo>() {
         });
@@ -421,34 +421,35 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
         itemEntity.setSpuName(spuInfoVo.getSpuName());
         itemEntity.setCategoryId(spuInfoVo.getCatalogId());
 
-        // 2.商品sku信息
+        // 2. Product sku information
         itemEntity.setSkuId(cartItem.getSkuId());
         itemEntity.setSkuName(cartItem.getTitle());
         itemEntity.setSkuPic(cartItem.getImage());
         itemEntity.setSkuPrice(cartItem.getPrice());
-        // 将 List集合 转换为 String字符串
+        // Convert List collection to String
         String skuAttr = StringUtils.collectionToDelimitedString(cartItem.getSkuAttr(), ";");
         itemEntity.setSkuAttrsVals(skuAttr);
         itemEntity.setSkuQuantity(cartItem.getCount());
 
-        // 3.商品优惠信息
+        // 3. Product discount information
         // ...
 
-        // 4.商品积分信息
-        itemEntity.setGiftGrowth(cartItem.getPrice().multiply(new BigDecimal(cartItem.getCount().toString())).intValue());
-        itemEntity.setGiftIntegration(cartItem.getPrice().multiply(new BigDecimal(cartItem.getCount().toString())).intValue());
+        // 4. Product integration information
+        BigDecimal total = cartItem.getPrice().multiply(new BigDecimal(cartItem.getCount()));
+        itemEntity.setGiftGrowth(total.intValue());
+        itemEntity.setGiftIntegration(total.intValue());
 
-        // 5.当前订单项的价格信息 (付款前，最后一次确定每个订单项的价格)
-        // 商品促销分解金额
-        itemEntity.setPromotionAmount(new BigDecimal("0"));
-        // 优惠券优惠分解金额
-        itemEntity.setCouponAmount(new BigDecimal("0"));
-        // 积分优惠分解金额
-        itemEntity.setIntegrationAmount(new BigDecimal("0"));
-        // 该商品经过优惠后的分解金额 (当前订单项的实际金额)
-        // 总额 = 单价 * 数量
-        BigDecimal origin = itemEntity.getSkuPrice().multiply(new BigDecimal(itemEntity.getSkuQuantity().toString()));
-        // 支付金额 = 总额 - 促销金额 - 优惠卷金额 - 积分优惠
+        // 5. Current order item price information (Confirm the price of each order item before payment)
+        // Product promotion split amount
+        itemEntity.setPromotionAmount(BigDecimal.ZERO);
+        // Coupon discount split amount
+        itemEntity.setCouponAmount(BigDecimal.ZERO);
+        // Integration discount split amount
+        itemEntity.setIntegrationAmount(BigDecimal.ZERO);
+        // The split amount after discounts (the actual amount of the current order item)
+        // Total = unit price * quantity
+        BigDecimal origin = itemEntity.getSkuPrice().multiply(new BigDecimal(itemEntity.getSkuQuantity()));
+        // Payment amount = total - promotion amount - coupon amount - integration discount
         BigDecimal orderItemFinalPrice = origin.subtract(itemEntity.getPromotionAmount())
                 .subtract(itemEntity.getCouponAmount())
                 .subtract(itemEntity.getIntegrationAmount());
@@ -456,6 +457,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
 
         return itemEntity;
     }
+
 
     // Calculate order price (total payable amount = order total amount + shipping fee)
     private void computePrice(OrderEntity orderEntity, List<OrderItemEntity> itemEntities) {
