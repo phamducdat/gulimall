@@ -2,52 +2,58 @@ package com.atguigu.gulimall.ware.entity;
 
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-
-import java.math.BigDecimal;
-import java.io.Serializable;
-import java.util.Date;
 import lombok.Data;
 
+import java.io.Serializable;
+import java.math.BigDecimal;
+
 /**
- * 
- * 
- * @author zhengyuli
- * @email zli78122@usc.edu
+ * Purchase Detail
+ * <p>
+ * Represents the details of a purchase order.
+ *
+ * @autor zhengyuli
  * @date 2020-06-23 00:25:27
  */
 @Data
 @TableName("wms_purchase_detail")
 public class PurchaseDetailEntity implements Serializable {
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	/**
-	 * 
-	 */
-	@TableId
-	private Long id;
-	/**
-	 * 采购单id
-	 */
-	private Long purchaseId;
-	/**
-	 * 采购商品id
-	 */
-	private Long skuId;
-	/**
-	 * 采购数量
-	 */
-	private Integer skuNum;
-	/**
-	 * 采购金额
-	 */
-	private BigDecimal skuPrice;
-	/**
-	 * 仓库id
-	 */
-	private Long wareId;
-	/**
-	 * 状态[0新建，1已分配，2正在采购，3已完成，4采购失败]
-	 */
-	private Integer status;
+    /**
+     * ID
+     */
+    @TableId
+    private Long id;
 
+    /**
+     * Purchase order ID
+     */
+    private Long purchaseId;
+
+    /**
+     * SKU ID of the purchased product
+     */
+    private Long skuId;
+
+    /**
+     * Quantity of the purchased product
+     */
+    private Integer skuNum;
+
+    /**
+     * Price of the purchased product
+     */
+    private BigDecimal skuPrice;
+
+    /**
+     * Warehouse ID
+     */
+    private Long wareId;
+
+    /**
+     * Status [0 - New, 1 - Assigned, 2 - Purchasing, 3 - Completed, 4 - Purchase Failed]
+     */
+    private Integer status;
 }
+
