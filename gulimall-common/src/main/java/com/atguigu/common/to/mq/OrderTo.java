@@ -5,175 +5,225 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.util.Date;
 
+
+/**
+ * Order Transfer Object
+ * <p>
+ * Represents the data transfer object for an order.
+ *
+ * @autor zhengyuli
+ * @date 2020-06-23 00:25:27
+ */
 @Data
 public class OrderTo {
 
     /**
-     * id
+     * ID
      */
     private Long id;
+
     /**
-     * member_id
+     * Member ID
      */
     private Long memberId;
+
     /**
-     * 订单号
+     * Order number (order SN)
      */
     private String orderSn;
+
     /**
-     * 使用的优惠券
+     * Coupon used
      */
     private Long couponId;
+
     /**
-     * create_time
+     * Creation time
      */
     private Date createTime;
+
     /**
-     * 用户名
+     * Member username
      */
     private String memberUsername;
+
     /**
-     * 订单总额
+     * Total order amount
      */
     private BigDecimal totalAmount;
+
     /**
-     * 应付总额
+     * Amount payable
      */
     private BigDecimal payAmount;
+
     /**
-     * 运费金额
+     * Freight amount
      */
     private BigDecimal freightAmount;
+
     /**
-     * 促销优化金额（促销价、满减、阶梯价）
+     * Promotion optimization amount (promotional price, full reduction, tiered price)
      */
     private BigDecimal promotionAmount;
+
     /**
-     * 积分抵扣金额
+     * Integration deduction amount
      */
     private BigDecimal integrationAmount;
+
     /**
-     * 优惠券抵扣金额
+     * Coupon deduction amount
      */
     private BigDecimal couponAmount;
+
     /**
-     * 后台调整订单使用的折扣金额
+     * Discount amount used for backend order adjustments
      */
     private BigDecimal discountAmount;
+
     /**
-     * 支付方式【1->支付宝；2->微信；3->银联； 4->货到付款；】
+     * Payment method [1->Alipay; 2->WeChat; 3->UnionPay; 4->Cash on delivery]
      */
     private Integer payType;
+
     /**
-     * 订单来源[0->PC订单；1->app订单]
+     * Order source [0->PC order; 1->app order]
      */
     private Integer sourceType;
+
     /**
-     * 订单状态【0->待付款；1->待发货；2->已发货；3->已完成；4->已关闭；5->无效订单】
+     * Order status [0->Pending payment; 1->Pending shipment; 2->Shipped; 3->Completed; 4->Closed; 5->Invalid order]
      */
     private Integer status;
+
     /**
-     * 物流公司(配送方式)
+     * Delivery company (shipping method)
      */
     private String deliveryCompany;
+
     /**
-     * 物流单号
+     * Delivery tracking number
      */
     private String deliverySn;
+
     /**
-     * 自动确认时间（天）
+     * Auto-confirm time (days)
      */
     private Integer autoConfirmDay;
+
     /**
-     * 可以获得的积分
+     * Points that can be earned
      */
     private Integer integration;
+
     /**
-     * 可以获得的成长值
+     * Growth value that can be earned
      */
     private Integer growth;
+
     /**
-     * 发票类型[0->不开发票；1->电子发票；2->纸质发票]
+     * Invoice type [0->No invoice; 1->Electronic invoice; 2->Paper invoice]
      */
     private Integer billType;
+
     /**
-     * 发票抬头
+     * Invoice header
      */
     private String billHeader;
+
     /**
-     * 发票内容
+     * Invoice content
      */
     private String billContent;
+
     /**
-     * 收票人电话
+     * Bill recipient phone number
      */
     private String billReceiverPhone;
+
     /**
-     * 收票人邮箱
+     * Bill recipient email
      */
     private String billReceiverEmail;
+
     /**
-     * 收货人姓名
+     * Recipient name
      */
     private String receiverName;
+
     /**
-     * 收货人电话
+     * Recipient phone number
      */
     private String receiverPhone;
+
     /**
-     * 收货人邮编
+     * Recipient postal code
      */
     private String receiverPostCode;
+
     /**
-     * 省份/直辖市
+     * Province/municipality
      */
     private String receiverProvince;
+
     /**
-     * 城市
+     * City
      */
     private String receiverCity;
+
     /**
-     * 区
+     * Region
      */
     private String receiverRegion;
+
     /**
-     * 详细地址
+     * Detailed address
      */
     private String receiverDetailAddress;
+
     /**
-     * 订单备注
+     * Order note
      */
     private String note;
+
     /**
-     * 确认收货状态[0->未确认；1->已确认]
+     * Confirm receipt status [0->Not confirmed; 1->Confirmed]
      */
     private Integer confirmStatus;
+
     /**
-     * 删除状态【0->未删除；1->已删除】
+     * Deletion status [0->Not deleted; 1->Deleted]
      */
     private Integer deleteStatus;
+
     /**
-     * 下单时使用的积分
+     * Points used when placing the order
      */
     private Integer useIntegration;
+
     /**
-     * 支付时间
+     * Payment time
      */
     private Date paymentTime;
+
     /**
-     * 发货时间
+     * Shipment time
      */
     private Date deliveryTime;
+
     /**
-     * 确认收货时间
+     * Receipt confirmation time
      */
     private Date receiveTime;
+
     /**
-     * 评价时间
+     * Review time
      */
     private Date commentTime;
+
     /**
-     * 修改时间
+     * Modification time
      */
     private Date modifyTime;
 }
