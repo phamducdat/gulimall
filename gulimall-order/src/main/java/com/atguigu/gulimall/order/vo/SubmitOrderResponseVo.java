@@ -4,12 +4,12 @@ import com.atguigu.gulimall.order.entity.OrderEntity;
 import lombok.Data;
 
 /**
- * 下单返回数据VO
+ * Submit Order Response Data VO
  */
 @Data
 public class SubmitOrderResponseVo {
-    // 订单
+    // Order
     private OrderEntity order;
-    // 状态码 (0 : 成功)
+    // Status code (0: Success)
     private Integer code;
 }
