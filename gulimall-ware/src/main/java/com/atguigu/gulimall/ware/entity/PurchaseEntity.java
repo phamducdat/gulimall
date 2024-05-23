@@ -2,64 +2,73 @@ package com.atguigu.gulimall.ware.entity;
 
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-
-import java.math.BigDecimal;
-import java.io.Serializable;
-import java.util.Date;
 import lombok.Data;
 
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.util.Date;
+
 /**
- * 采购信息
- * 
- * @author zhengyuli
- * @email zli78122@usc.edu
+ * Purchase Information
+ * <p>
+ * Represents the details of a purchase order.
+ *
+ * @autor zhengyuli
  * @date 2020-06-23 00:25:27
  */
 @Data
 @TableName("wms_purchase")
 public class PurchaseEntity implements Serializable {
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	/**
-	 * 采购单id
-	 */
-	@TableId
-	private Long id;
-	/**
-	 * 采购人id
-	 */
-	private Long assigneeId;
-	/**
-	 * 采购人名
-	 */
-	private String assigneeName;
-	/**
-	 * 联系方式
-	 */
-	private String phone;
-	/**
-	 * 优先级
-	 */
-	private Integer priority;
-	/**
-	 * 状态
-	 */
-	private Integer status;
-	/**
-	 * 仓库id
-	 */
-	private Long wareId;
-	/**
-	 * 总金额
-	 */
-	private BigDecimal amount;
-	/**
-	 * 创建日期
-	 */
-	private Date createTime;
-	/**
-	 * 更新日期
-	 */
-	private Date updateTime;
+    /**
+     * Purchase order ID
+     */
+    @TableId
+    private Long id;
 
+    /**
+     * Assignee ID
+     */
+    private Long assigneeId;
+
+    /**
+     * Assignee name
+     */
+    private String assigneeName;
+
+    /**
+     * Contact phone number
+     */
+    private String phone;
+
+    /**
+     * Priority level
+     */
+    private Integer priority;
+
+    /**
+     * Status
+     */
+    private Integer status;
+
+    /**
+     * Warehouse ID
+     */
+    private Long wareId;
+
+    /**
+     * Total amount
+     */
+    private BigDecimal amount;
+
+    /**
+     * Creation date
+     */
+    private Date createTime;
+
+    /**
+     * Update date
+     */
+    private Date updateTime;
 }
