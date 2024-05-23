@@ -1,27 +1,24 @@
 package com.atguigu.gulimall.ware.service.impl;
 
 import com.alibaba.fastjson.TypeReference;
+import com.atguigu.common.utils.PageUtils;
+import com.atguigu.common.utils.Query;
 import com.atguigu.common.utils.R;
+import com.atguigu.gulimall.ware.dao.WareInfoDao;
+import com.atguigu.gulimall.ware.entity.WareInfoEntity;
 import com.atguigu.gulimall.ware.feign.MemberFeignService;
+import com.atguigu.gulimall.ware.service.WareInfoService;
 import com.atguigu.gulimall.ware.vo.FareVo;
 import com.atguigu.gulimall.ware.vo.MemberAddressVo;
-import org.springframework.stereotype.Service;
-
-import java.math.BigDecimal;
-import java.util.Map;
-
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.atguigu.common.utils.PageUtils;
-import com.atguigu.common.utils.Query;
-
-import com.atguigu.gulimall.ware.dao.WareInfoDao;
-import com.atguigu.gulimall.ware.entity.WareInfoEntity;
-import com.atguigu.gulimall.ware.service.WareInfoService;
+import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
+import java.math.BigDecimal;
+import java.util.Map;
 
 @Service("wareInfoService")
 public class WareInfoServiceImpl extends ServiceImpl<WareInfoDao, WareInfoEntity> implements WareInfoService {
@@ -29,31 +26,31 @@ public class WareInfoServiceImpl extends ServiceImpl<WareInfoDao, WareInfoEntity
     @Resource
     private MemberFeignService memberFeignService;
 
-    // 根据 收货地址 计算 运费
+    // Calculate shipping fee based on the delivery address
     @Override
     public FareVo getFare(Long addrId) {
         FareVo fareVo = new FareVo();
-        // 根据 收货地址id 获取 收货地址信息
+        // Get delivery address information based on the delivery address ID
         R addrInfoR = memberFeignService.addrInfo(addrId);
-        // 从 addrInfoR 中获取 memberAddressVo
+        // Get MemberAddressVo from addrInfoR
         MemberAddressVo memberAddressVo = addrInfoR.getData("memberReceiveAddress", new TypeReference<MemberAddressVo>() {
         });
         if (memberAddressVo != null) {
-            // 调用第三方物流接口，计算运费
-            // 此处模拟计算运费 : 用户手机号最后一位的数字为运费
+            // Call a third-party logistics interface to calculate the shipping fee
+            // Simulate shipping fee calculation: use the last digit of the user's phone number as the shipping fee
             String phone = memberAddressVo.getPhone();
-            String substring = phone.substring(phone.length() - 1, phone.length());
+            String substring = phone.substring(phone.length() - 1);
             BigDecimal bigDecimal = new BigDecimal(substring);
-            // 设置 会员收货地址
+            // Set the member's delivery address
             fareVo.setAddress(memberAddressVo);
-            // 设置 运费
+            // Set the shipping fee
             fareVo.setFare(bigDecimal);
             return fareVo;
         }
         return null;
     }
 
-    // 分页条件查询
+    // Paginated conditional query
     @Override
     public PageUtils queryPage(Map<String, Object> params) {
         QueryWrapper<WareInfoEntity> wareInfoEntityQueryWrapper = new QueryWrapper<>();
@@ -70,4 +67,5 @@ public class WareInfoServiceImpl extends ServiceImpl<WareInfoDao, WareInfoEntity
 
         return new PageUtils(page);
     }
+
 }
