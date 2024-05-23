@@ -17,7 +17,7 @@ public class OrderItemVo {
 
     private String image;
 
-    // 销售属性
+    // Sales attributes
     private List<String> skuAttr;
 
     private BigDecimal price;
@@ -26,6 +26,6 @@ public class OrderItemVo {
 
     private BigDecimal totalPrice;
 
-    // 商品重量
+    // commodity weight
     private BigDecimal weight;
 }

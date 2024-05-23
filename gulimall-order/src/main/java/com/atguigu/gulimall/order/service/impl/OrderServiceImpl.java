@@ -394,14 +394,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
     private List<OrderItemEntity> buildOrderItems(String orderSn) {
         // Get all shopping items selected by the current user
         List<OrderItemVo> currentUserCartItems = cartFeignService.getCurrentUserCartItems();
-        if (currentUserCartItems != null && currentUserCartItems.size() > 0) {
-            List<OrderItemEntity> itemEntities = currentUserCartItems.stream().map(cartItem -> {
+        if (currentUserCartItems != null && !currentUserCartItems.isEmpty()) {
+            return currentUserCartItems.stream().map(cartItem -> {
                 // Build information for the current order item (build information for each order item)
                 OrderItemEntity orderItemEntity = buildOrderItem(cartItem);
                 orderItemEntity.setOrderSn(orderSn);
                 return orderItemEntity;
             }).collect(Collectors.toList());
-            return itemEntities;
         }
         return null;
     }
