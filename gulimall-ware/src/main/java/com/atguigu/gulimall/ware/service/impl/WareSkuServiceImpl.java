@@ -5,38 +5,36 @@ import com.atguigu.common.exception.NoStockException;
 import com.atguigu.common.to.mq.OrderTo;
 import com.atguigu.common.to.mq.StockDetailTo;
 import com.atguigu.common.to.mq.StockLockedTo;
+import com.atguigu.common.utils.PageUtils;
+import com.atguigu.common.utils.Query;
 import com.atguigu.common.utils.R;
+import com.atguigu.gulimall.ware.dao.WareSkuDao;
 import com.atguigu.gulimall.ware.entity.WareOrderTaskDetailEntity;
 import com.atguigu.gulimall.ware.entity.WareOrderTaskEntity;
+import com.atguigu.gulimall.ware.entity.WareSkuEntity;
 import com.atguigu.gulimall.ware.feign.OrderFeignService;
 import com.atguigu.gulimall.ware.feign.ProductFeignService;
 import com.atguigu.gulimall.ware.service.WareOrderTaskDetailService;
 import com.atguigu.gulimall.ware.service.WareOrderTaskService;
+import com.atguigu.gulimall.ware.service.WareSkuService;
 import com.atguigu.gulimall.ware.vo.OrderItemVo;
 import com.atguigu.gulimall.ware.vo.OrderVo;
 import com.atguigu.gulimall.ware.vo.SkuHasStockVo;
 import com.atguigu.gulimall.ware.vo.WareSkuLockVo;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.Data;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.atguigu.common.utils.PageUtils;
-import com.atguigu.common.utils.Query;
-
-import com.atguigu.gulimall.ware.dao.WareSkuDao;
-import com.atguigu.gulimall.ware.entity.WareSkuEntity;
-import com.atguigu.gulimall.ware.service.WareSkuService;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 @Service("wareSkuService")
 public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> implements WareSkuService {
@@ -166,67 +164,67 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
     }
 
     /**
-     * 锁定库存 (所有订单项都锁定成功才算锁定成功，只要有一个订单项锁定失败那就是锁定失败)
+     * Lock stock (only successful if all order items are locked successfully; if any order item fails to lock, the lock is considered a failure)
      */
     @Transactional
     @Override
     public Boolean orderLockStock(WareSkuLockVo lockVo) {
         /*
-         * 库存工作单 & 库存工作单详情
+         * Inventory work order & inventory work order details
          *
-         * 一个订单 对应 一个库存工作单
-         * 一个订单 有 n个订单项
-         * 一个订单项 对应 一个库存工作单详情 (n个订单项 对应 n个库存工作单详情)
+         * One order corresponds to one inventory work order
+         * One order has n order items
+         * One order item corresponds to one inventory work order detail (n order items correspond to n inventory work order details)
          *
-         * 库存工作单 保存了 订单号
-         * 库存工作单详情 保存了 每一个订单项的相关信息，包括 库存工作单id、商品id、锁定的商品件数、仓库id、锁定状态
+         * The inventory work order saves the order number
+         * The inventory work order detail saves relevant information for each order item, including inventory work order id, product id, locked product quantity, warehouse id, lock status
          *
-         * 库存工作单 & 库存工作单详情 作用是什么?
-         *   解锁库存时，通过查询 库存工作单 & 库存工作单详情
-         *   可以获取 每一个订单项的相关信息，包括 库存工作单id、商品id、锁定的商品件数、仓库id、锁定状态
-         *   需要通过这些信息，来解锁库存
+         * What is the purpose of the inventory work order & inventory work order details?
+         *   When unlocking stock, by querying the inventory work order & inventory work order details,
+         *   we can get relevant information for each order item, including inventory work order id, product id, locked product quantity, warehouse id, lock status
+         *   This information is needed to unlock the stock
          *
-         * 对于 库存工作单，只要执行当前方法，先在数据库中 保存"库存工作单"信息
-         * 对于 库存工作单详情，每锁定成功一个订单项，在数据库中 保存一份"库存工作单详情"信息
+         * For the inventory work order, as long as the current method is executed, the "inventory work order" information is saved in the database first
+         * For the inventory work order detail, each order item locked successfully saves an "inventory work order detail" information in the database
          */
 
-        // 保存 库存工作单
+        // Save inventory work order
         WareOrderTaskEntity taskEntity = new WareOrderTaskEntity();
         taskEntity.setOrderSn(lockVo.getOrderSn());
         wareOrderTaskService.save(taskEntity);
 
-        // 给 每一个订单项 都封装一个 SkuWareHasStock对象 (查询 每件商品在哪些仓库中有库存)
+        // For each order item, encapsulate a SkuWareHasStock object (query which warehouses have stock for each product)
         List<OrderItemVo> locks = lockVo.getLocks();
         List<SkuWareHasStock> collect = locks.stream().map(item -> {
             SkuWareHasStock stock = new SkuWareHasStock();
             Long skuId = item.getSkuId();
             stock.setSkuId(skuId);
             stock.setNum(item.getCount());
-            // 根据 skuId 查询 该商品在哪些仓库中有库存
+            // Query which warehouses have stock for the product based on skuId
             List<Long> wareIds = baseMapper.listWareIdHasSkuStock(skuId);
             stock.setWareId(wareIds);
             return stock;
         }).collect(Collectors.toList());
 
-        // 锁定库存
+        // Lock stock
         for (SkuWareHasStock hasStock : collect) {
             Boolean skuStocked = false;
             Long skuId = hasStock.getSkuId();
             List<Long> wareIds = hasStock.getWareId();
             if (wareIds == null || wareIds.size() == 0) {
-                // 没有任何仓库有当前商品 -> 当前商品锁定失败 -> 全局锁定失败 -> 抛出 NoStockException异常
+                // No warehouses have the current product -> current product lock failed -> global lock failed -> throw NoStockException
                 throw new NoStockException(skuId);
             }
             for (Long wareId : wareIds) {
-                // 锁定库存 (根据 商品id、库存id、需要锁定的商品件数 锁定库存)
-                //   锁定成功 : 返回1
-                //   锁定失败 : 返回0
+                // Lock stock (lock stock based on product id, warehouse id, and quantity of product to be locked)
+                //   Lock success: return 1
+                //   Lock failure: return 0
                 Long count = baseMapper.lockSkuStock(skuId, wareId, hasStock.getNum());
                 if (count == 1) {
-                    // 当前商品 锁定成功
+                    // Current product lock successful
                     skuStocked = true;
 
-                    // 保存 库存工作单详情
+                    // Save inventory work order detail
                     WareOrderTaskDetailEntity taskDetailEntity = new WareOrderTaskDetailEntity();
                     taskDetailEntity.setSkuId(skuId);
                     taskDetailEntity.setSkuName("");
@@ -236,7 +234,7 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
                     taskDetailEntity.setLockStatus(1);
                     wareOrderTaskDetailService.save(taskDetailEntity);
 
-                    // 封装 StockLockedTo对象 (库存工作单TO)
+                    // Encapsulate StockLockedTo object (inventory work order TO)
                     StockLockedTo stockLockedTo = new StockLockedTo();
                     stockLockedTo.setId(taskEntity.getId());
                     StockDetailTo stockDetailTo = new StockDetailTo();
@@ -244,42 +242,43 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
                     stockLockedTo.setDetailTo(stockDetailTo);
 
                     /*
-                     * 一个订单 对应 一个库存工作单
-                     * 一个订单 有 n个订单项
-                     * 一个订单项 对应 一个库存工作单详情 (n个订单项 对应 n个库存工作单详情)
+                     * One order corresponds to one inventory work order
+                     * One order has n order items
+                     * One order item corresponds to one inventory work order detail (n order items correspond to n inventory work order details)
                      *
-                     * 所有订单项都锁定成功，数据库中会保存 一条"库存工作单"记录 和 n条"库存工作单详情"记录
-                     * 同时，RabbitMQ 会接收到 n条消息，每一条消息的内容都是一个 StockLockedTo对象
+                     * If all order items are locked successfully, the database will save one "inventory work order" record and n "inventory work order detail" records
+                     * At the same time, RabbitMQ will receive n messages, each message containing a StockLockedTo object
                      *
-                     * 只要有一个订单项锁定失败，系统就会抛出 NoStockException异常，事务回滚
-                     * 数据库中不会有"库存工作单"和"库存工作单详情"记录
-                     * 但 RabbitMQ 会接收到 在这次锁定失败之前 所有锁定成功的订单项发出的消息
-                     * 对于已经发出的消息，2分钟后，它们会被转发到 "stock.release.stock.queue"队列
-                     * "stock.release.stock.queue" 的消费者在获取到这些消息之后，会执行"解锁库存"的业务逻辑
-                     * 判断得知 这些消息对应的"库存工作单"和"库存工作单详情"记录不存在，所以 无需解锁
+                     * If any order item fails to lock, the system will throw a NoStockException, and the transaction will roll back
+                     * The database will not have "inventory work order" and "inventory work order detail" records
+                     * However, RabbitMQ will receive messages for all successfully locked order items before the lock failed
+                     * For the messages already sent, after 2 minutes, they will be forwarded to the "stock.release.stock.queue" queue
+                     * The consumer of the "stock.release.stock.queue" will execute the "unlock stock" business logic after receiving these messages
+                     * It will determine that the "inventory work order" and "inventory work order detail" records corresponding to these messages do not exist, so no unlock is needed
                      */
 
-                    // 发送延时消息
-                    // "stock-event-exchange"交换机 会将消息派送到 "stock.delay.queue"队列
-                    // "stock.delay.queue"队列 为一个 延时队列，也叫 死信队列 ("stock.delay.queue"队列 没有消费者)
-                    // 2分钟后，延时队列 会将消息转发到 "stock.release.stock.queue"队列
-                    // "stock.release.stock.queue" 的消费者在获取消息之后，会执行"解锁库存"的业务逻辑
+                    // Send delayed message
+                    // The "stock-event-exchange" exchange will dispatch the message to the "stock.delay.queue"
+                    // The "stock.delay.queue" is a delayed queue, also called a dead letter queue (the "stock.delay.queue" has no consumers)
+                    // After 2 minutes, the delayed queue will forward the message to the "stock.release.stock.queue"
+                    // The consumer of the "stock.release.stock.queue" will execute the "unlock stock" business logic after receiving the message
                     rabbitTemplate.convertAndSend("stock-event-exchange", "stock.locked", stockLockedTo);
 
                     break;
                 } else {
-                    // 当前仓库 锁定 当前商品 失败
-                    // 如果还有下一个仓库，尝试使用下一个仓库 锁定 当前商品
+                    // Current warehouse failed to lock the current product
+                    // If there is another warehouse, try to lock the current product with the next warehouse
                 }
             }
             if (!skuStocked) {
-                // 所有仓库 锁定 当前商品 失败 -> 当前商品锁定失败 -> 全局锁定失败 -> 抛出 NoStockException异常
+                // All warehouses failed to lock the current product -> current product lock failed -> global lock failed -> throw NoStockException
                 throw new NoStockException(skuId);
             }
         }
-        // 全部商品锁定成功 -> 全局锁定成功
+        // All products locked successfully -> global lock successful
         return true;
     }
+
 
     // 查询sku是否有库存
     @Override
