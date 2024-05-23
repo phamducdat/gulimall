@@ -57,109 +57,111 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
-    // 根据 OrderTo对象 解锁库存
+    // Unlock stock based on OrderTo object
     @Transactional
     @Override
     public void unlockStock(OrderTo orderTo) {
-        // 获取 订单号
+        // Get order number
         String orderSn = orderTo.getOrderSn();
-        // 根据 订单号 查询 库存工作单
+        // Query inventory work order based on order number
         WareOrderTaskEntity taskEntity = wareOrderTaskService.getOrderTaskByOrderSn(orderSn);
-        // 获取 库存工作单id
+        // Get inventory work order id
         Long taskId = taskEntity.getId();
-        // 根据 库存工作单id 查询所有 "lockStatus = 1"的库存工作单详情
-        //   lockStatus = 1 : 库存已锁定
-        //   lockStatus = 2 : 库存已解锁
-        //   lockStatus = 3 : 库存已扣减
+        // Query all inventory work order details with "lockStatus = 1" based on inventory work order id
+        //   lockStatus = 1 : Stock locked
+        //   lockStatus = 2 : Stock unlocked
+        //   lockStatus = 3 : Stock deducted
         QueryWrapper<WareOrderTaskDetailEntity> wrapper = new QueryWrapper<>();
         wrapper.eq("task_id", taskId);
         wrapper.eq("lock_status", 1);
         List<WareOrderTaskDetailEntity> wareOrderTaskDetailEntities = wareOrderTaskDetailService.list(wrapper);
 
-        // 遍历"库存工作单详情"集合，解锁库存
+        // Iterate through the inventory work order detail collection and unlock stock
         for (WareOrderTaskDetailEntity entity : wareOrderTaskDetailEntities) {
-            // 解锁库存 & 更新库存工作单详情
+            // Unlock stock & update inventory work order detail
             unLockStock(entity.getSkuId(), entity.getWareId(), entity.getSkuNum(), entity.getId());
         }
     }
 
-    // 根据 StockLockedTo对象 解锁库存
+
+    // Unlock stock based on StockLockedTo object
     @Override
     public void unlockStock(StockLockedTo stockLockedTo) {
-        // 获取 库存工作单详情
+        // Get inventory work order detail
         StockDetailTo detail = stockLockedTo.getDetailTo();
-        // 获取 库存工作单详情id
+        // Get inventory work order detail id
         Long detailId = detail.getId();
 
         /*
-         * 根据 库存工作单详情id 查询 最新的库存工作单详情 (对应 wms_ware_order_task_detail 数据表)
-         *     能查到记录 : 库存锁定成功 ("库存工作单详情"是在"锁定库存"时创建的，能查到"库存工作单详情"记录，说明库存锁定成功)
-         *     查不到记录 : 库存锁定失败 ("库存工作单详情"是在"锁定库存"时创建的，查不到"库存工作单详情"记录，说明库存锁定失败，事务回滚)
+         * Query the latest inventory work order detail based on the inventory work order detail id (corresponding to the wms_ware_order_task_detail database table)
+         *     Record found: Stock locked successfully (the "inventory work order detail" was created when "locking stock", finding the "inventory work order detail" record indicates successful stock locking)
+         *     Record not found: Stock lock failed (the "inventory work order detail" was created when "locking stock", not finding the "inventory work order detail" record indicates stock lock failed, transaction rolled back)
          *
-         *     1.能查到记录 : 库存锁定成功 -> 根据 订单状态 & 库存工作单详情的锁定状态 决定是否需要 解锁库存
-         *         a.订单不存在 : 解锁库存
-         *             库存服务在"锁定库存"完成后，订单服务没有收到库存服务的响应 OR 订单服务"生成订单"的后续操作出现问题
-         *             订单服务就会抛出异常，然后订单服务事务回滚
-         *             因为库存服务已经执行结束，所以库存服务的事务不会回滚
-         *             所以数据库中没有订单服务相关的数据记录，但有库存服务相关的数据记录
-         *             这种情况(订单创建失败) 必须要 解锁库存
-         *         b.订单状态为"已取消" & 库存工作单详情的锁定状态为"库存已锁定" : 订单已经取消，但库存还在锁定商品 -> 解锁库存
-         *     2.查不到记录 : 库存锁定失败，事务回滚 -> 无需解锁
+         *     1. Record found: Stock locked successfully -> Decide whether to unlock stock based on order status & inventory work order detail lock status
+         *         a. Order does not exist: Unlock stock
+         *             After the inventory service completes "locking stock", the order service did not receive the inventory service's response OR there was a problem in the order service's subsequent operations of "creating order"
+         *             The order service throws an exception and the order service transaction rolls back
+         *             Since the inventory service has completed, the inventory service transaction will not roll back
+         *             Thus, there is no order service-related data record in the database, but there is inventory service-related data record
+         *             In this case (order creation failure), stock must be unlocked
+         *         b. Order status is "canceled" & inventory work order detail lock status is "stock locked": Order has been canceled, but stock is still locked -> Unlock stock
+         *     2. Record not found: Stock lock failed, transaction rolled back -> No need to unlock
          */
 
-        // 根据 库存工作单详情id 查询 最新的库存工作单详情
+        // Query the latest inventory work order detail based on the inventory work order detail id
         WareOrderTaskDetailEntity wareOrderTaskDetailEntity = wareOrderTaskDetailService.getById(detailId);
         if (wareOrderTaskDetailEntity != null) {
-            // 能查到"库存工作单详情"记录 : 库存锁定成功 -> 根据 订单状态 & 库存工作单详情的锁定状态 决定是否需要 解锁库存
-            // 库存工作单id
+            // Record found: Stock locked successfully -> Decide whether to unlock stock based on order status & inventory work order detail lock status
+            // Inventory work order id
             Long id = stockLockedTo.getId();
-            // 根据 库存工作单id 获取 库存工作单
+            // Get inventory work order based on inventory work order id
             WareOrderTaskEntity taskEntity = wareOrderTaskService.getById(id);
-            // 从 库存工作单 中获取 订单号
+            // Get order number from inventory work order
             String orderSn = taskEntity.getOrderSn();
-            // 根据 订单号 查询 订单信息
+            // Query order information based on order number
             R orderVoR = orderFeignService.getOrderByOrderSn(orderSn);
             if (orderVoR.getCode() == 0) {
-                // 远程服务调用成功
-                // 从 orderVoR 中获取 orderVo(订单信息)
+                // Remote service call successful
+                // Get orderVo (order information) from orderVoR
                 OrderVo orderVo = orderVoR.getData(new TypeReference<OrderVo>() {
                 });
-                // orderVo == null          : 订单不存在
-                // orderVo.getStatus() == 4 : 订单状态为"已取消"
-                // 订单不存在 : 解锁库存
-                // 订单状态为"已取消" & 库存工作单详情的锁定状态为"库存已锁定" : 订单已经取消，但库存还在锁定商品 -> 解锁库存
+                // orderVo == null          : Order does not exist
+                // orderVo.getStatus() == 4 : Order status is "canceled"
+                // Order does not exist: Unlock stock
+                // Order status is "canceled" & inventory work order detail lock status is "stock locked": Order has been canceled, but stock is still locked -> Unlock stock
                 if (orderVo == null || orderVo.getStatus() == 4) {
-                    // 获取 库存工作单详情的锁定状态
-                    //   lockStatus = 1 : 库存已锁定
-                    //   lockStatus = 2 : 库存已解锁
-                    //   lockStatus = 3 : 库存已扣减
-                    // 只有当 lockStatus = 1 时，才需要 解锁库存 (库存已锁定，但需要解锁库存)
+                    // Get inventory work order detail lock status
+                    //   lockStatus = 1 : Stock locked
+                    //   lockStatus = 2 : Stock unlocked
+                    //   lockStatus = 3 : Stock deducted
+                    // Only when lockStatus = 1, stock needs to be unlocked (stock is locked, but needs to be unlocked)
                     if (wareOrderTaskDetailEntity.getLockStatus() == 1) {
-                        // 解锁库存 & 更新库存工作单详情
+                        // Unlock stock & update inventory work order detail
                         unLockStock(detail.getSkuId(), detail.getWareId(), detail.getSkuNum(), detailId);
                     }
                 }
             } else {
-                // 远程服务调用失败 -> 抛出异常 -> 消息监听器 handleStockLockedRelease() 捕获到异常 -> 拒收消息 -> 消息重新入队
-                throw new RuntimeException("远程服务调用失败");
+                // Remote service call failed -> Throw exception -> Message listener handleStockLockedRelease() catches the exception -> Reject the message -> Message requeued
+                throw new RuntimeException("Remote service call failed");
             }
         } else {
-            // 查不到"库存工作单详情"记录 : 库存锁定失败，事务回滚 -> 无需解锁
+            // Record not found: Stock lock failed, transaction rolled back -> No need to unlock
         }
     }
 
-    // 解锁库存 & 更新库存工作单详情
+
+    // Unlock stock & update inventory work order detail
     public void unLockStock(Long skuId, Long wareId, Integer num, Long taskDetailId) {
-        // 解锁库存 (根据 商品id、仓库id、需要解锁的商品件数 解锁库存)
+        // Unlock stock (unlock stock based on product id, warehouse id, and quantity of product to be unlocked)
         baseMapper.unLockStock(skuId, wareId, num);
 
-        // 更新 库存工作单详情
+        // Update inventory work order detail
         WareOrderTaskDetailEntity entity = new WareOrderTaskDetailEntity();
-        // 设置 库存工作单详情id
+        // Set inventory work order detail id
         entity.setId(taskDetailId);
-        // 设置 锁定状态 为 已解锁
+        // Set lock status to unlocked
         entity.setLockStatus(2);
-        // 更新 库存工作单详情
+        // Update inventory work order detail
         wareOrderTaskDetailService.updateById(entity);
     }
 
@@ -280,39 +282,40 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
     }
 
 
-    // 查询sku是否有库存
+    // Check if SKU has stock
     @Override
     public List<SkuHasStockVo> getSkuHasStock(List<Long> skuIds) {
         List<SkuHasStockVo> collect = skuIds.stream().map(skuId -> {
             SkuHasStockVo vo = new SkuHasStockVo();
-            // 查询 当前sku 的 总库存量
+            // Query the total stock of the current SKU
             Long count = baseMapper.getSkuStock(skuId);
             vo.setSkuId(skuId);
-            vo.setHasStock(count == null ? false : count > 0);
+            vo.setHasStock(count != null && count > 0);
             return vo;
         }).collect(Collectors.toList());
 
         return collect;
     }
 
-    // 将 成功采购的商品 入库
+
+    // Add stock for successfully purchased products
     @Override
     public void addStock(Long skuId, Long wareId, Integer skuNum) {
-        // 如果仓库中还没有这件商品的记录 -> 新增
-        // 如果仓库中已经有了这件商品的记录 -> 更新
+        // If there is no record of this product in the warehouse -> add new
+        // If there is already a record of this product in the warehouse -> update
         List<WareSkuEntity> entities = wareSkuDao.selectList(
                 new QueryWrapper<WareSkuEntity>().eq("sku_id", skuId).eq("ware_id", wareId)
         );
-        if (entities == null || entities.size() == 0) {
+        if (entities == null || entities.isEmpty()) {
             WareSkuEntity skuEntity = new WareSkuEntity();
             skuEntity.setSkuId(skuId);
             skuEntity.setStock(skuNum);
             skuEntity.setWareId(wareId);
             skuEntity.setStockLocked(0);
 
-            // 远程调用 商品微服务，查询 商品名称
-            // 如果查询失败，事务不回滚！！！因为没必要因为一个不重要的字段没查出来，就把整个事务都回滚
-            // 所以，如果 捕获到异常，不需要把异常抛出，直接自己把异常吞下即可 -> catch{} 中 除了打印异常信息外 其余什么都不做！
+            // Remote call to product microservice to query product name
+            // If the query fails, the transaction does not roll back!!! Because it is not necessary to roll back the entire transaction just because a non-essential field could not be queried
+            // Therefore, if an exception is caught, there is no need to throw the exception, just swallow the exception -> in the catch{} block, apart from printing the exception information, do nothing else!
             try {
                 R info = productFeignService.info(skuId);
                 Map<String, Object> data = (Map<String, Object>) info.get("skuInfo");
@@ -322,15 +325,16 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            // 添加 商品库存记录
+            // Add product stock record
             wareSkuDao.insert(skuEntity);
         } else {
-            // 更新 商品库存记录
+            // Update product stock record
             wareSkuDao.addStock(skuId, wareId, skuNum);
         }
     }
 
-    // 分页条件查询
+
+    // Paginated conditional query
     @Override
     public PageUtils queryPage(Map<String, Object> params) {
         QueryWrapper<WareSkuEntity> queryWrapper = new QueryWrapper<>();
@@ -352,11 +356,12 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
 
     @Data
     class SkuWareHasStock {
-        // 商品id
+        // Product id
         private Long skuId;
-        // 需要锁定的商品件数
+        // Quantity of product to be locked
         private Integer num;
-        // 拥有该商品的仓库集合 (该商品在哪些仓库中有库存)
+        // Collection of warehouses that have the product (which warehouses have stock for this product)
         private List<Long> wareId;
     }
+
 }
