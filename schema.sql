@@ -160,3 +160,71 @@ CREATE TABLE oms_refund_info (
     refund_content TEXT,
     FOREIGN KEY (order_return_id) REFERENCES oms_order_return_apply(id)
 );
+-- =============================================ware============================================
+CREATE TABLE wms_ware_order_task_detail (
+    id BIGINT PRIMARY KEY,
+    sku_id BIGINT,
+    sku_name VARCHAR(255),
+    sku_num INTEGER,
+    task_id BIGINT,
+    ware_id BIGINT,
+    lock_status INTEGER,
+    FOREIGN KEY (task_id) REFERENCES wms_ware_order_task(id),
+    FOREIGN KEY (ware_id) REFERENCES wms_ware_info(id)
+);
+CREATE TABLE wms_ware_sku (
+    id BIGINT PRIMARY KEY,
+    sku_id BIGINT,
+    ware_id BIGINT,
+    stock INTEGER,
+    sku_name VARCHAR(255),
+    stock_locked INTEGER,
+    FOREIGN KEY (ware_id) REFERENCES wms_ware_info(id)
+);
+CREATE TABLE wms_ware_info (
+    id BIGINT PRIMARY KEY,
+    name VARCHAR(255),
+    address VARCHAR(255),
+    area_code VARCHAR(100)
+);
+CREATE TABLE wms_purchase_detail (
+    id BIGINT PRIMARY KEY,
+    purchase_id BIGINT,
+    sku_id BIGINT,
+    sku_num INTEGER,
+    sku_price DECIMAL(19, 2),
+    ware_id BIGINT,
+    status INTEGER,
+    FOREIGN KEY (purchase_id) REFERENCES wms_purchase(id),
+    FOREIGN KEY (ware_id) REFERENCES wms_ware_info(id)
+);
+CREATE TABLE wms_purchase (
+    id BIGINT PRIMARY KEY,
+    assignee_id BIGINT,
+    assignee_name VARCHAR(255),
+    phone VARCHAR(50),
+    priority INTEGER,
+    status INTEGER,
+    ware_id BIGINT,
+    amount DECIMAL(19, 2),
+    create_time TIMESTAMP,
+    update_time TIMESTAMP,
+    FOREIGN KEY (ware_id) REFERENCES wms_ware_info(id)
+);
+CREATE TABLE wms_ware_order_task (
+    id BIGINT PRIMARY KEY,
+    order_id BIGINT,
+    order_sn VARCHAR(255),
+    consignee VARCHAR(255),
+    consignee_tel VARCHAR(50),
+    delivery_address VARCHAR(255),
+    order_comment TEXT,
+    payment_way INTEGER,
+    task_status INTEGER,
+    order_body TEXT,
+    tracking_no VARCHAR(255),
+    create_time TIMESTAMP,
+    ware_id BIGINT,
+    task_comment TEXT,
+    FOREIGN KEY (ware_id) REFERENCES wms_ware_info(id)
+);
