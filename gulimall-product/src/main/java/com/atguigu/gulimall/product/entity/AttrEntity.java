@@ -2,63 +2,62 @@ package com.atguigu.gulimall.product.entity;
 
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-
-import java.io.Serializable;
-import java.util.Date;
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
- * 商品属性
- * 
- * @author zhengyuli
- * @email zli78122@usc.edu
- * @date 2020-06-22 23:03:41
+ * Product Attribute
+ *
+ * @Author Zhengyuli
+ * @Email zli78122@usc.edu
+ * @Date 2020-06-22 23:03:41
  */
 @Data
 @TableName("pms_attr")
 public class AttrEntity implements Serializable {
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	/**
-	 * 属性id
-	 */
-	@TableId
-	private Long attrId;
-	/**
-	 * 属性名
-	 */
-	private String attrName;
-	/**
-	 * 是否需要检索[0-不需要，1-需要]
-	 */
-	private Integer searchType;
-	/**
-	 * 值类型[0-为单个值，1-可以选择多个值]
-	 */
-	private Integer valueType;
-	/**
-	 * 属性图标
-	 */
-	private String icon;
-	/**
-	 * 可选值列表[用逗号分隔]
-	 */
-	private String valueSelect;
-	/**
-	 * 属性类型[0-销售属性，1-基本属性，2-既是销售属性又是基本属性]
-	 */
-	private Integer attrType;
-	/**
-	 * 启用状态[0 - 禁用，1 - 启用]
-	 */
-	private Long enable;
-	/**
-	 * 所属分类
-	 */
-	private Long catelogId;
-	/**
-	 * 快速展示【是否展示在介绍上；0-否 1-是】，在sku中仍然可以调整
-	 */
-	private Integer showDesc;
-
+    /**
+     * Attribute ID
+     */
+    @TableId
+    private Long attrId;
+    /**
+     * Attribute Name
+     */
+    private String attrName;
+    /**
+     * Search Requirement [0 - Not Required, 1 - Required]
+     */
+    private Integer searchType;
+    /**
+     * Value Type [0 - Single Value, 1 - Multiple Values]
+     */
+    private Integer valueType;
+    /**
+     * Attribute Icon
+     */
+    private String icon;
+    /**
+     * Optional Values List [Comma Separated]
+     */
+    private String valueSelect;
+    /**
+     * Attribute Type [0 - Sales Attribute, 1 - Basic Attribute, 2 - Both Sales and Basic Attribute]
+     */
+    private Integer attrType;
+    /**
+     * Enable Status [0 - Disabled, 1 - Enabled]
+     */
+    private Long enable;
+    /**
+     * Category ID
+     */
+    private Long catelogId;
+    /**
+     * Quick Display [Whether to display on introduction; 0 - No, 1 - Yes], can still be adjusted in SKU
+     */
+    private Integer showDesc;
 }
+

@@ -6,20 +6,18 @@ import com.atguigu.common.valid.UpdateGroup;
 import com.atguigu.common.valid.UpdateStatusGroup;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-
-import java.io.Serializable;
-
 import lombok.Data;
 import org.hibernate.validator.constraints.URL;
 
 import javax.validation.constraints.*;
+import java.io.Serializable;
 
 /**
- * 品牌
+ * Brand
  *
- * @author zhengyuli
- * @email zli78122@usc.edu
- * @date 2020-06-22 23:03:41
+ * @Author Zhengyuli
+ * @Email zli78122@usc.edu
+ * @Date 2020-06-22 23:03:41
  */
 @Data
 @TableName("pms_brand")
@@ -27,43 +25,44 @@ public class BrandEntity implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 品牌id
+     * Brand ID
      */
-    @NotNull(message = "修改必须指定品牌id", groups = {UpdateGroup.class})
-    @Null(message = "新增不能指定id", groups = {AddGroup.class})
+    @NotNull(message = "Brand ID must be specified when updating", groups = {UpdateGroup.class})
+    @Null(message = "Brand ID must not be specified when adding", groups = {AddGroup.class})
     @TableId
     private Long brandId;
     /**
-     * 品牌名
+     * Brand Name
      */
-    @NotBlank(message = "品牌名必须提交", groups = {AddGroup.class, UpdateGroup.class})
+    @NotBlank(message = "Brand name is required", groups = {AddGroup.class, UpdateGroup.class})
     private String name;
     /**
-     * 品牌logo地址
+     * Brand Logo URL
      */
     @NotBlank(groups = {AddGroup.class})
-    @URL(message = "logo必须是一个合法的url地址", groups = {AddGroup.class, UpdateGroup.class})
+    @URL(message = "Logo must be a valid URL", groups = {AddGroup.class, UpdateGroup.class})
     private String logo;
     /**
-     * 介绍
+     * Description
      */
     private String descript;
     /**
-     * 显示状态[0-不显示；1-显示]
+     * Display Status [0 - Not Displayed; 1 - Displayed]
      */
     @NotNull(groups = {AddGroup.class, UpdateGroup.class, UpdateStatusGroup.class})
     @ListValue(vals = {0, 1}, groups = {AddGroup.class, UpdateGroup.class, UpdateStatusGroup.class})
     private Integer showStatus;
     /**
-     * 检索首字母
+     * Search Initial Letter
      */
     @NotEmpty(groups = {AddGroup.class})
-    @Pattern(regexp = "^[a-zA-Z]$", message = "检索首字母必须是一个字母", groups = {AddGroup.class, UpdateGroup.class})
+    @Pattern(regexp = "^[a-zA-Z]$", message = "Search initial letter must be a letter", groups = {AddGroup.class, UpdateGroup.class})
     private String firstLetter;
     /**
-     * 排序
+     * Sort Order
      */
     @NotNull(groups = {AddGroup.class})
-    @Min(value = 0, message = "排序必须大于等于0", groups = {AddGroup.class, UpdateGroup.class})
+    @Min(value = 0, message = "Sort order must be greater than or equal to 0", groups = {AddGroup.class, UpdateGroup.class})
     private Integer sort;
 }
+
