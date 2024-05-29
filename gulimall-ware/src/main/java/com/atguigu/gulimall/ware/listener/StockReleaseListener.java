@@ -20,40 +20,42 @@ public class StockReleaseListener {
     private WareSkuService wareSkuService;
 
     /**
-     * 监听 "stock.release.stock.queue"队列
-     * 收到消息(库存锁定已满2分钟) -> 执行"解锁库存"的业务逻辑
+     * Listener for the "stock.release.stock.queue" queue.
+     * Upon receiving a message (stock locked for more than 2 minutes), it executes the "unlock inventory" business logic.
      */
     @RabbitHandler
     public void handleStockLockedRelease(StockLockedTo stockLockedTo, Message message, Channel channel) throws IOException {
-        System.out.println("库存工作单详情id = " + stockLockedTo.getDetailTo().getId() + "。" +
-                "库存锁定已满2分钟，执行'解锁库存'的业务逻辑。");
+        System.out.println("Stock Work Order Detail ID = " + stockLockedTo.getDetailTo().getId() +
+                ". Stock locked for more than 2 minutes, executing 'unlock inventory' business logic.");
 
         try {
-            // 根据 StockLockedTo对象 解锁库存
+            // Unlock inventory based on the StockLockedTo object
             wareSkuService.unlockStock(stockLockedTo);
-            // 签收消息
+            // Acknowledge the message
             channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
         } catch (Exception e) {
-            // 拒收消息 -> 消息重新入队
+            // Reject the message -> Message will be requeued
             channel.basicReject(message.getMessageProperties().getDeliveryTag(), true);
         }
     }
 
+
     /**
-     * 监听 "stock.release.stock.queue"队列
-     * 收到消息(订单已取消) -> 执行"解锁库存"的业务逻辑
+     * Listener for the "stock.release.stock.queue" queue.
+     * Upon receiving a message (order canceled), it executes the "unlock inventory" business logic.
      */
     @RabbitHandler
     public void handleOrderCloseRelease(OrderTo orderTo, Message message, Channel channel) throws IOException {
-        System.out.println("订单号[" + orderTo.getOrderSn() + "]: " + "订单已取消，执行'解锁库存'的业务逻辑。");
+        System.out.println("Order Number [" + orderTo.getOrderSn() + "]: Order has been canceled, executing 'unlock inventory' business logic.");
         try {
-            // 根据 OrderTo对象 解锁库存
+            // Unlock inventory based on the OrderTo object
             wareSkuService.unlockStock(orderTo);
-            // 签收消息
+            // Acknowledge the message
             channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
         } catch (Exception e) {
-            // 拒收消息 -> 消息重新入队
+            // Reject the message -> Message will be requeued
             channel.basicReject(message.getMessageProperties().getDeliveryTag(), true);
         }
     }
+
 }
