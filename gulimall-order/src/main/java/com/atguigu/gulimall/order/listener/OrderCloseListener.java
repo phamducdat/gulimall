@@ -19,20 +19,23 @@ public class OrderCloseListener {
     private OrderService orderService;
 
     /**
-     * 监听 "order.release.order.queue"队列
-     * 收到消息(订单创建已满1分钟) -> 判断订单状态是否为 "待付款"，如果是，就取消订单
+     * Listener for the "order.release.order.queue" queue.
+     * Upon receiving a message (order created and has been pending for 1 minute),
+     * it checks if the order status is "Pending Payment". If it is, the order is canceled.
      */
     @RabbitHandler
     public void listener(OrderEntity orderEntity, Channel channel, Message message) throws IOException {
-        System.out.println("订单号[" + orderEntity.getOrderSn() + "]: " + "订单创建已满1分钟，判断订单状态是否为 '待付款'，如果是，就取消订单。");
+        System.out.println("Order Number [" + orderEntity.getOrderSn() + "]: " +
+                "Order created and has been pending for 1 minute, checking if the status is 'Pending Payment'. If it is, the order will be canceled.");
         try {
-            // 判断订单状态是否为 "待付款"，如果是，就取消订单
+            // Check if the order status is "Pending Payment". If it is, cancel the order.
             orderService.closeOrder(orderEntity);
-            // 签收消息
+            // Acknowledge the message
             channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
         } catch (Exception e) {
-            // 拒收消息 -> 消息重新入队
+            // Reject the message -> Message will be requeued
             channel.basicReject(message.getMessageProperties().getDeliveryTag(), true);
         }
     }
+
 }

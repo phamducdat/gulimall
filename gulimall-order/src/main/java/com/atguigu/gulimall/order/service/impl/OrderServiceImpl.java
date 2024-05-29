@@ -183,37 +183,39 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
         return payVo;
     }
 
-    // 判断订单状态是否为 "待付款"，如果是，就取消订单
     @Override
     public void closeOrder(OrderEntity entity) {
-        // 查询订单的最新状态
-        //   如果订单的最新状态为 "待付款"，那说明 用户在订单生成后的一段时间内都没有付款
-        //   在实际生产环境下，"这段时间" 通常为 15min - 30min，我们的系统为了方便测试，将 "这段时间" 设置为 1min
-        //   如果订单状态为 "待付款"，那系统认为 用户已经放弃此次交易
-        //   接下来系统要做的就是 将订单状态修改为 "已取消"，然后 解锁库存
+        // Fetch the latest order status
+        // If the latest order status is "Pending Payment", it means the user hasn't paid within the allotted time
+        // In a real production environment, this time frame is typically 15-30 minutes. For testing purposes, it's set to 1 minute.
+        // If the order status is "Pending Payment", the system assumes the user has abandoned the transaction
+        // The system will then change the order status to "Canceled" and unlock the inventory.
         OrderEntity orderEntity = this.getById(entity.getId());
-        // 订单的最新状态为 "待付款"
-        if (orderEntity.getStatus().equals(OrderStatusEnum.CREATE_NEW.getCode())) {
-            // 将订单状态修改为 "已取消"
+
+        // Check if the order's latest status is "Pending Payment"
+        if (OrderStatusEnum.CREATE_NEW.getCode().equals(orderEntity.getStatus())) {
+            // Update the order status to "Canceled"
             OrderEntity update = new OrderEntity();
             update.setId(orderEntity.getId());
             update.setStatus(OrderStatusEnum.CANCELLED.getCode());
             this.updateById(update);
 
-            // 给 RabbitMQ 发送消息，解锁库存
+            // Send a message to RabbitMQ to unlock inventory
             OrderTo orderTo = new OrderTo();
             BeanUtils.copyProperties(orderEntity, orderTo);
             try {
-                // 发送消息
-                // "order-event-exchange"交换机 会将消息派送到 "stock.release.stock.queue"队列
-                // "stock.release.stock.queue" 的消费者在获取消息之后，会执行"解锁库存"的业务逻辑
+                // Send message
+                // The "order-event-exchange" exchange will route the message to the "stock.release.stock.queue" queue
+                // The consumer of "stock.release.stock.queue" will then execute the "unlock inventory" business logic
                 rabbitTemplate.convertAndSend("order-event-exchange", "order.release.other", orderTo);
             } catch (AmqpException e) {
-                // 如果此时捕获到了异常，那一定是由于网络原因所导致的消息没有发送成功 -> 将没有发送成功的消息重新进行发送
+                // If an exception is caught, it is likely due to network issues preventing the message from being sent successfully
+                // -> Retry sending the failed message
                 e.printStackTrace();
             }
         }
     }
+
 
     // 根据 订单号 查询 订单信息
     @Override
