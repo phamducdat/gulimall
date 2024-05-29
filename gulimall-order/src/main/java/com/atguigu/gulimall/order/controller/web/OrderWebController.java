@@ -62,13 +62,14 @@ public class OrderWebController {
     }
 
     /**
-     * 封装 OrderConfirmVo对象，并跳转到 订单确认页面
+     * Encapsulates the OrderConfirmVo object and redirects to the order confirmation page.
      */
     @GetMapping("/toTrade")
     public String toTrade(Model model) throws ExecutionException, InterruptedException {
-        // 封装 OrderConfirmVo对象
+        // Encapsulate OrderConfirmVo object
         OrderConfirmVo confirmVo = orderService.confirmOrder();
         model.addAttribute("data", confirmVo);
         return "confirm";
     }
+
 }

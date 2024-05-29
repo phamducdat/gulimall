@@ -82,15 +82,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
-    // 创建 秒杀订单
+    // Create flash sale order
     @Override
     public void createSecKillOrder(SecKillOrderTo secKillOrderTo) {
-        // 根据 skuId 查询 spu信息
+        // Retrieve spu information based on skuId
         R spuInfoR = productFeignService.getSpuInfoBySkuId(secKillOrderTo.getSkuId());
         SpuInfoVo spuInfoVo = spuInfoR.getData(new TypeReference<SpuInfoVo>() {
         });
 
-        // 保存订单信息
+        // Save order information
         OrderEntity orderEntity = new OrderEntity();
         orderEntity.setOrderSn(secKillOrderTo.getOrderSn());
         orderEntity.setMemberId(secKillOrderTo.getMemberId());
@@ -100,7 +100,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
         orderEntity.setModifyTime(new Date());
         this.save(orderEntity);
 
-        // 保存订单项信息
+        // Save order item information
         OrderItemEntity orderItemEntity = new OrderItemEntity();
         orderItemEntity.setOrderSn(secKillOrderTo.getOrderSn());
         orderItemEntity.setRealAmount(orderPrice);
@@ -217,7 +217,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
     }
 
 
-    // 根据 订单号 查询 订单信息
+    // Query order information based on order number
     @Override
     public OrderEntity getOrderByOrderSn(String orderSn) {
         QueryWrapper<OrderEntity> wrapper = new QueryWrapper<>();
@@ -515,64 +515,64 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
         }
     }
 
-    // 封装 OrderConfirmVo对象
+    // Encapsulate OrderConfirmVo object
     @Override
     public OrderConfirmVo confirmOrder() throws ExecutionException, InterruptedException {
         OrderConfirmVo confirmVo = new OrderConfirmVo();
 
-        // 从 ThreadLocal 中获取 loginMember
+        // Get loginMember from ThreadLocal
         MemberResponseVO loginMember = LoginUserInterceptor.loginUser.get();
 
         /*
-         * 异步请求时，会出现 Feign远程调用丢失请求上下文 的问题
-         *   出现这个问题的原因 :
-         *     Feign远程调用请求 是由 分线程(异步任务) 发出的
-         *     只有主线程可以得到 原始请求的上下文信息，分线程无法获得主线程中的数据，所以分线程无法得到 原始请求的上下文信息
-         *     正因为 分线程(异步任务) 没有 原始请求的上下文信息
-         *     所以，在分线程在发出 Feign远程调用请求 时，Feign远程调用 会丢失 原始请求的请求上下文信息
+         * Issue with Feign remote call losing request context during asynchronous requests
+         * Reason:
+         * - Feign remote call request is made by a sub-thread (asynchronous task)
+         * - Only the main thread can get the original request context, sub-threads cannot access data in the main thread, hence losing the original request context
+         * - Due to the sub-thread (asynchronous task) not having the original request context,
+         * - Feign remote call loses the original request context information when made by a sub-thread.
          *
-         *   这个问题引发的结果 :
-         *     Feign远程调用其他微服务，其他微服务无法从Feign请求中获取 原始请求的相关数据 (比如 : Cookie 请求头)
-         *     导致远程微服务无法获取 原始请求的Cookie数据，即不能判断当前用户是否已登录
-         *     所以会默认用户未登录，导致逻辑判断出错，进而引发了一系列错误
+         * Consequence:
+         * - Feign remote call to other microservices, which cannot retrieve original request data (e.g., Cookie headers),
+         * - The remote microservice cannot get the original request Cookie data, thus cannot determine if the user is logged in,
+         * - This leads to assuming the user is not logged in, causing logical errors and further issues.
          *
-         *   解决方案 :
-         *     第一步 : 从主线程中获取 原始请求的上下文信息
-         *     第二步 : 将 原始请求的上下文信息 保存到 异步任务所在的分线程 中 (分线程共享主线程的请求上下文信息)
+         * Solution:
+         * - Step 1: Get the original request context from the main thread,
+         * - Step 2: Save the original request context to the sub-thread executing the asynchronous task (sub-thread sharing the main thread's request context).
          */
 
-        // 从主线程中获取 原始请求的上下文信息
+        // Get the original request context from the main thread
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
 
-        // 开启异步任务 : 获取 会员收货地址
+        // Start asynchronous task: Get member shipping address
         CompletableFuture<Void> addressFuture = CompletableFuture.runAsync(() -> {
-            // 将 原始请求的上下文信息 保存到 异步任务所在的分线程 中 (分线程共享主线程的请求上下文信息)
+            // Save the original request context to the sub-thread executing the asynchronous task
             RequestContextHolder.setRequestAttributes(requestAttributes);
 
-            // 获取 会员收货地址
+            // Get member shipping address
             List<MemberAddressVo> address = memberFeignService.getAddressByMemberId(loginMember.getId());
             confirmVo.setAddress(address);
         }, executor);
 
-        // 开启异步任务 : 获取当前用户选中的所有购物项 & 每个购物项对应的商品是否有货
+        // Start asynchronous task: Get all selected shopping items & check if each item is in stock
         CompletableFuture<Void> cartItemsFuture = CompletableFuture.runAsync(() -> {
-            // 将 原始请求的上下文信息 保存到 异步任务所在的分线程 中 (分线程共享主线程的请求上下文信息)
+            // Save the original request context to the sub-thread executing the asynchronous task
             RequestContextHolder.setRequestAttributes(requestAttributes);
 
-            // 获取 当前用户选中的所有购物项
+            // Get all selected shopping items for the current user
             List<OrderItemVo> items = cartFeignService.getCurrentUserCartItems();
             confirmVo.setItems(items);
         }, executor).thenRunAsync(() -> {
-            // 上一个异步任务执行完毕之后，才会执行当前异步任务 - 异步任务的线程串行化
+            // The current asynchronous task will execute after the previous one completes - Serializing asynchronous tasks
 
-            // 用户选中的所有购物项
+            // All selected shopping items
             List<OrderItemVo> items = confirmVo.getItems();
-            // 所有购物项 对应的 skuId集合
+            // All skuId collections corresponding to shopping items
             List<Long> skuIdList = items.stream().map(item -> item.getSkuId()).collect(Collectors.toList());
-            // 批量查询商品是否有货
+            // Batch query to check if items are in stock
             R skuStockVoR = wareFeignService.getSkuHasStock(skuIdList);
-            // 从 skuStockVoR 中获取 SkuStockVo集合
-            // 每一个 SkuStockVo 包含了 商品id & 商品是否有货
+            // Get SkuStockVo collection from skuStockVoR
+            // Each SkuStockVo contains item id & stock status
             List<SkuStockVo> skuStockVoList = skuStockVoR.getData(new TypeReference<List<SkuStockVo>>() {
             });
             if (skuStockVoList != null) {
@@ -582,23 +582,24 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
             }
         }, executor);
 
-        // 设置 优惠劵信息 (会员积分)
+        // Set coupon information (member points)
         Integer integration = loginMember.getIntegration();
         confirmVo.setIntegration(integration);
 
-        // 创建 防重令牌
+        // Create an anti-duplicate token
         String token = UUID.randomUUID().toString().replace("-", "");
-        // 在 Redis 中保存一份 防重令牌
+        // Save an anti-duplicate token in Redis
         redisTemplate.opsForValue().set(OrderConstant.USER_ORDER_TOKEN_PREFIX + loginMember.getId(), token, 30, TimeUnit.MINUTES);
-        // 在 OrderConfirmVo对象 中保存一份 防重令牌
-        // 服务器会将 OrderConfirmVo对象 传到HTML页面 -> 页面中可以获取 防重令牌
+        // Save an anti-duplicate token in the OrderConfirmVo object
+        // The server will pass the OrderConfirmVo object to the HTML page -> The page can get the anti-duplicate token
         confirmVo.setOrderToken(token);
 
-        // 等待所有异步任务完成
+        // Wait for all asynchronous tasks to complete
         CompletableFuture.allOf(addressFuture, cartItemsFuture).get();
 
         return confirmVo;
     }
+
 
     @Override
     public PageUtils queryPage(Map<String, Object> params) {
