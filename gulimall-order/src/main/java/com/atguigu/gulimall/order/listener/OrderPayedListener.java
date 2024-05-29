@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.servlet.http.HttpServletRequest;
 import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -29,41 +28,50 @@ public class OrderPayedListener {
     private OrderService orderService;
 
     /**
-     * 支付完成后 支付宝异步回调
+     * Handles Alipay asynchronous callback after payment completion.
      */
     @PostMapping("/payed/notify")
-    public String handAlipayAsyncNotify(PayAsyncVo payAsyncVo, HttpServletRequest request) throws AlipayApiException, UnsupportedEncodingException {
-        // 验证签名 (验证本次请求是不是支付宝发出的，防止数据篡改和伪造)
+    public String handleAlipayAsyncNotify(PayAsyncVo payAsyncVo, HttpServletRequest request) throws AlipayApiException, UnsupportedEncodingException {
+        // Verify the signature (ensure the request is sent by Alipay to prevent data tampering and forgery)
         Map<String, String> params = new HashMap<>();
         Map<String, String[]> requestParams = request.getParameterMap();
-        for (Iterator<String> iter = requestParams.keySet().iterator(); iter.hasNext(); ) {
-            String name = (String) iter.next();
-            String[] values = (String[]) requestParams.get(name);
-            String valueStr = "";
+
+        for (String name : requestParams.keySet()) {
+            String[] values = requestParams.get(name);
+            StringBuilder valueStr = new StringBuilder();
             for (int i = 0; i < values.length; i++) {
-                valueStr = (i == values.length - 1) ? valueStr + values[i]
-                        : valueStr + values[i] + ",";
+                valueStr.append(values[i]);
+                if (i != values.length - 1) {
+                    valueStr.append(",");
+                }
             }
-            params.put(name, valueStr);
+            params.put(name, valueStr.toString());
         }
-        boolean signVerified = AlipaySignature.rsaCheckV1(params, alipayTemplate.getAlipay_public_key(), alipayTemplate.getCharset(), alipayTemplate.getSign_type()); //调用SDK验证签名
+
+        boolean signVerified = AlipaySignature.rsaCheckV1(
+                params,
+                alipayTemplate.getAlipay_public_key(),
+                alipayTemplate.getCharset(),
+                alipayTemplate.getSign_type()
+        ); // Call SDK to verify the signature
 
         if (signVerified) {
-            // 验签成功
-            // 开发者的app_id
+            // Signature verification successful
             String appId = payAsyncVo.getApp_id();
-            // 根据 订单号 查询 订单信息
+            // Query order information by order number
             OrderEntity orderEntity = orderService.getOrderByOrderSn(payAsyncVo.getOut_trade_no());
+
             if (orderEntity != null && alipayTemplate.getApp_id().equals(appId)) {
-                // 支付完成 -> 保存支付信息 & 修改订单状态
+                // Payment completed -> Save payment information & update order status
                 String result = orderService.handPayResult(payAsyncVo);
                 return result;
             } else {
                 return "error";
             }
         } else {
-            // 验签失败
+            // Signature verification failed
             return "error";
         }
     }
+
 }
