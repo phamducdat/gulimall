@@ -1,46 +1,47 @@
 package com.atguigu.gulimall.order.service;
 
 import com.atguigu.common.to.mq.SecKillOrderTo;
-import com.atguigu.gulimall.order.vo.*;
-import com.baomidou.mybatisplus.extension.service.IService;
 import com.atguigu.common.utils.PageUtils;
 import com.atguigu.gulimall.order.entity.OrderEntity;
+import com.atguigu.gulimall.order.vo.*;
+import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 /**
- * 订单
- *
- * @author zhengyuli
- * @email zli78122@usc.edu
- * @date 2020-06-23 00:20:14
+ * Order Service
+ * <p>
+ * Author: Zhengyuli
+ * Email: zli78122@usc.edu
+ * Date: 2020-06-23 00:20:14
  */
 public interface OrderService extends IService<OrderEntity> {
 
     PageUtils queryPage(Map<String, Object> params);
 
-    // 封装 OrderConfirmVo对象
+    // Encapsulate OrderConfirmVo object
     OrderConfirmVo confirmOrder() throws ExecutionException, InterruptedException;
 
-    // 提交订单 (下单)
+    // Submit an order (place an order)
     SubmitOrderResponseVo submitOrder(OrderSubmitVo vo);
 
-    // 根据 订单号 查询 订单信息
+    // Get order information by order number
     OrderEntity getOrderByOrderSn(String orderSn);
 
-    // 判断订单状态是否为 "待付款"，如果是，就取消订单
+    // Check if the order status is "Pending Payment", if so, cancel the order
     void closeOrder(OrderEntity entity);
 
-    // 根据 订单号 获取 PayVo对象
+    // Get PayVo object by order number
     PayVo getOrderPay(String orderSn);
 
-    // 分页查询当前登录用户的所有订单信息
+    // Paginated query of all orders for the currently logged-in user
     PageUtils queryPageWithItem(Map<String, Object> params);
 
-    // 支付完成 -> 保存支付信息 & 修改订单状态
+    // After payment completion -> Save payment information & update order status
     String handPayResult(PayAsyncVo vo);
 
-    // 创建 秒杀订单
+    // Create a flash sale order
     void createSecKillOrder(SecKillOrderTo secKillOrderTo);
 }
+
