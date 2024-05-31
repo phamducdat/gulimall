@@ -26,7 +26,7 @@ public class OAuth2Controller {
     private MemberFeignService memberFeignService;
 
     /**
-     * 社交登录 - 微博登录
+     * Social Login - Weibo Login
      */
     @GetMapping("/oauth2.0weibo/success")
     public String weibo(@RequestParam("code") String code, HttpSession session) throws Exception {
@@ -36,32 +36,33 @@ public class OAuth2Controller {
         map.put("grant_type", "authorization_code");
         map.put("redirect_uri", "http://auth.gulimall.com/oauth2.0weibo/success");
         map.put("code", code);
-        // 获取 Access Token
+        // Get Access Token
         HttpResponse response = HttpUtils.doPost("https://api.weibo.com", "/oauth2/access_token", "post", new HashMap<>(), map, new HashMap<>());
 
         if (response.getStatusLine().getStatusCode() == 200) {
             String json = EntityUtils.toString(response.getEntity());
-            // 将 json字符串 转换为 SocialUser对象
+            // Convert JSON string to SocialUser object
             SocialUser socialUser = JSON.parseObject(json, SocialUser.class);
-            // 调用远程微服务 : 社交登录
+            // Call remote microservice: Social Login
             R loginR = memberFeignService.oauthLogin(socialUser);
 
             if (loginR.getCode() == 0) {
-                // 登录成功
-                // 从 loginR 中获取 loginUser
+                // Login successful
+                // Get loginUser from loginR
                 MemberResponseVO loginUser = loginR.getData(new TypeReference<MemberResponseVO>() {
                 });
-                // 将 用户登录信息(loginUser) 存储到 Session 中
+                // Store user login information (loginUser) in the session
                 session.setAttribute(AuthServerConstant.LOGIN_USER, loginUser);
-                // 跳转到网站首页
+                // Redirect to website homepage
                 return "redirect:http://gulimall.com";
             } else {
-                // 登录失败
-                return "redirect:http://auth.gulimall.com/login.html ";
+                // Login failed
+                return "redirect:http://auth.gulimall.com/login.html";
             }
         } else {
-            // 登录失败
-            return "redirect:http://auth.gulimall.com/login.html ";
+            // Login failed
+            return "redirect:http://auth.gulimall.com/login.html";
         }
     }
 }
+
