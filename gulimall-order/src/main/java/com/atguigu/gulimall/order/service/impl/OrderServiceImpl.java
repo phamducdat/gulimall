@@ -113,10 +113,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
         orderItemService.save(orderItemEntity);
     }
 
-    // 支付完成 -> 保存支付信息 & 修改订单状态
+    // Payment completed -> Save payment information & modify order status
     @Override
     public String handPayResult(PayAsyncVo payAsyncVo) {
-        // 保存支付信息 - 对应 oms_payment_info 数据库表
+        // Save payment information - corresponds to the oms_payment_info database table
         PaymentInfoEntity paymentInfoEntity = new PaymentInfoEntity();
         paymentInfoEntity.setAlipayTradeNo(payAsyncVo.getTrade_no());
         paymentInfoEntity.setOrderSn(payAsyncVo.getOut_trade_no());
@@ -124,16 +124,17 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
         paymentInfoEntity.setCallbackTime(payAsyncVo.getNotify_time());
         paymentInfoService.save(paymentInfoEntity);
 
-        // 修改订单状态
+        // Modify order status
         if (payAsyncVo.getTrade_status().equals("TRADE_SUCCESS") || payAsyncVo.getTrade_status().equals("TRADE_FINISHED")) {
-            // 订单号
+            // Order number
             String outTradeNo = payAsyncVo.getOut_trade_no();
-            // 修改订单状态
+            // Modify order status
             baseMapper.updateOrderStatus(outTradeNo, OrderStatusEnum.PAYED.getCode());
         }
 
         return "success";
     }
+
 
     // 分页查询当前登录用户的所有订单信息
     @Override

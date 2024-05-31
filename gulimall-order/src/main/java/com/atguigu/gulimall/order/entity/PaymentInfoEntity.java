@@ -2,68 +2,77 @@ package com.atguigu.gulimall.order.entity;
 
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-
-import java.math.BigDecimal;
-import java.io.Serializable;
-import java.util.Date;
 import lombok.Data;
 
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.util.Date;
+
 /**
- * 支付信息表
- * 
- * @author zhengyuli
- * @email zli78122@usc.edu
- * @date 2020-06-23 00:20:14
+ * Payment Information Table
+ * <p>
+ * Author: zhengyuli
+ * Email: zli78122@usc.edu
+ * Date: 2020-06-23 00:20:14
  */
 @Data
 @TableName("oms_payment_info")
 public class PaymentInfoEntity implements Serializable {
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	/**
-	 * id
-	 */
-	@TableId
-	private Long id;
-	/**
-	 * 订单号（对外业务号）
-	 */
-	private String orderSn;
-	/**
-	 * 订单id
-	 */
-	private Long orderId;
-	/**
-	 * 支付宝交易流水号
-	 */
-	private String alipayTradeNo;
-	/**
-	 * 支付总金额
-	 */
-	private BigDecimal totalAmount;
-	/**
-	 * 交易内容
-	 */
-	private String subject;
-	/**
-	 * 支付状态
-	 */
-	private String paymentStatus;
-	/**
-	 * 创建时间
-	 */
-	private Date createTime;
-	/**
-	 * 确认时间
-	 */
-	private Date confirmTime;
-	/**
-	 * 回调内容
-	 */
-	private String callbackContent;
-	/**
-	 * 回调时间
-	 */
-	private Date callbackTime;
+    /**
+     * id
+     */
+    @TableId
+    private Long id;
 
+    /**
+     * Order number (external business number)
+     */
+    private String orderSn;
+
+    /**
+     * Order id
+     */
+    private Long orderId;
+
+    /**
+     * Alipay transaction number
+     */
+    private String alipayTradeNo;
+
+    /**
+     * Total payment amount
+     */
+    private BigDecimal totalAmount;
+
+    /**
+     * Transaction content
+     */
+    private String subject;
+
+    /**
+     * Payment status
+     */
+    private String paymentStatus;
+
+    /**
+     * Creation time
+     */
+    private Date createTime;
+
+    /**
+     * Confirmation time
+     */
+    private Date confirmTime;
+
+    /**
+     * Callback content
+     */
+    private String callbackContent;
+
+    /**
+     * Callback time
+     */
+    private Date callbackTime;
 }
